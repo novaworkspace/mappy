@@ -19,7 +19,7 @@
 :root{
   color-scheme:light;
   --bg:#EEF1EC; --surface:#FFFFFF; --surface-2:#F5F7F4; --ink:#15201C; --muted:#5B6863; --line:#D3DBD5;
-  --accent:#2440E6; --accent-ink:#FFFFFF; --accent-soft:rgba(36,64,230,.16); --hi:#FFD23F; --hi-ink:#15201C; --warn:#C8237A;
+  --accent:#2440E6; --accent-ink:#FFFFFF; --accent-soft:rgba(36,64,230,.16); --food:#C9560A; --photo:#C8237A; --hi:#FFD23F; --hi-ink:#15201C; --warn:#C8237A;
   --shadow:0 12px 32px -16px rgba(21,32,28,.35);
   --display:"Unbounded","Arial Black",system-ui,sans-serif;
   --body:"Onest",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
@@ -30,7 +30,7 @@
   :root{
     color-scheme:dark;
     --bg:#0F1513; --surface:#182120; --surface-2:#141C1A; --ink:#E7EEEA; --muted:#98A6A0; --line:#2A3632;
-    --accent:#8497FF; --accent-ink:#0F1513; --accent-soft:rgba(132,151,255,.2); --hi:#E9BE2B; --hi-ink:#0F1513; --warn:#F06AB0;
+    --accent:#8497FF; --accent-ink:#0F1513; --accent-soft:rgba(132,151,255,.2); --food:#F29A4A; --photo:#F06AB0; --hi:#E9BE2B; --hi-ink:#0F1513; --warn:#F06AB0;
     --shadow:0 12px 32px -16px rgba(0,0,0,.8);
   }
 }
@@ -76,6 +76,11 @@ a{color:var(--accent)}
 /* markers */
 .mk{width:40px;height:40px;border-radius:50%;border:3px solid var(--surface);background:var(--surface-2) center/cover no-repeat;box-shadow:0 3px 10px rgba(0,0,0,.35);transition:transform .15s}
 .mk.dot{width:16px;height:16px;border-width:2.5px;background:var(--muted);margin:12px}
+.mk.ic{width:32px;height:32px;margin:4px;display:grid;place-items:center;background:var(--surface);border-width:2.5px}
+.mk.ic svg{width:17px;height:17px}
+.mk.food{border-color:var(--food);color:var(--food)}
+.mk.photo{border-color:var(--photo);color:var(--photo)}
+.mk.dim{opacity:.25}
 .mk.new{border-color:var(--hi)}
 .mk.front{transform:scale(1.18);border-color:var(--accent)}
 .me{width:120px;height:120px;position:relative;pointer-events:none}
@@ -106,6 +111,22 @@ a{color:var(--accent)}
 
 /* list */
 .list-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.filters{display:flex;gap:6px;overflow-x:auto;margin:10px -16px 0;padding:2px 16px 4px;scrollbar-width:none}
+.filters::-webkit-scrollbar{display:none}
+.fchip{flex:none;display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 12px;font-size:14px;font-weight:600;cursor:pointer;color:var(--ink)}
+.fchip svg{width:15px;height:15px}
+.fchip small{font-family:var(--mono);font-size:11px;color:var(--muted);font-weight:500}
+.fchip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.fchip[aria-pressed="true"] small{color:inherit;opacity:.7}
+.fchip.food{color:var(--food)} .fchip.photo{color:var(--photo)}
+.fchip.food[aria-pressed="true"]{background:var(--food);border-color:var(--food);color:#fff}
+.fchip.photo[aria-pressed="true"]{background:var(--photo);border-color:var(--photo);color:#fff}
+.pill{display:inline-flex;align-items:center;gap:3px;vertical-align:2px;margin-left:6px;font-family:var(--body);font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 6px;border-radius:6px;color:#fff;white-space:nowrap}
+.pill svg{width:11px;height:11px}
+.pill.food{background:var(--food)} .pill.photo{background:var(--photo)}
+.tip{display:flex;gap:10px;align-items:flex-start;background:var(--surface);border-radius:16px;padding:12px 14px;font-size:15px;border-left:4px solid var(--photo)}
+.tip svg{width:20px;height:20px;flex:none;color:var(--photo);margin-top:2px}
+.tip.food{border-left-color:var(--food)} .tip.food svg{color:var(--food)}
 .seg{display:inline-flex;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:3px;gap:2px}
 .seg button{border:0;background:transparent;padding:7px 12px;border-radius:9px;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
@@ -235,6 +256,7 @@ a{color:var(--accent)}
       </div>
       <span class="msg" id="count"></span>
     </div>
+    <div class="filters" id="filters" role="group" aria-label="Фильтр"></div>
     <div class="list" id="list"></div>
   </section>
 
@@ -252,6 +274,7 @@ a{color:var(--accent)}
       <p class="hook" id="pHook" hidden></p>
       <div class="meta" id="pMeta"></div>
     </div>
+    <div class="tip" id="pTip" hidden></div>
     <div class="story">
       <div class="prose" id="pStory"></div>
       <div class="story-foot" id="pFoot" hidden><span id="pModel"></span><button class="linkbtn" id="retell" type="button">Рассказать заново</button></div>
@@ -285,6 +308,12 @@ a{color:var(--accent)}
         <label class="choice"><input type="radio" name="model" value="claude-opus-5-5"><div><b>Opus 5.5 <span class="cost">$$$</span></b><span>Самая умная и самая дорогая. Для мест, где хочется глубины.</span></div></label>
       </div>
       <p class="msg">Цепляющие факты в списке всегда пишет Haiku, одним запросом на всю пачку мест, и они запоминаются. Выбранная модель пишет только рассказы.</p>
+    </div>
+
+    <div class="field">
+      <span class="lbl">Что тебе интересно</span>
+      <div class="filters" id="interestChips" style="flex-wrap:wrap;margin:0;padding:0"></div>
+      <p class="msg">Гид будет выводить эти темы вперёд в рассказах, а в списке появятся фильтры по ним.</p>
     </div>
 
     <div class="field">
@@ -332,6 +361,19 @@ a{color:var(--accent)}
     long:   { words: "400–550 слов", tokens: 1600, secs: "сильнейший факт, главная история с именами и развязкой, ещё одна история, что тут творится сейчас, связь с кино, музыкой или звёздами (только реальная, иначе пропусти), детали, которые все пропускают, в конце совет, что сделать прямо сейчас" }
   };
   const HOOK_MODEL = "claude-haiku-4-5-20251001";
+  const TOPICS = {
+    history: "История", politics: "Политика", fashion: "Мода", film: "Кино", pop: "Поп-культура",
+    music: "Музыка", art: "Искусство", architecture: "Архитектура", literature: "Литература", sport: "Спорт", science: "Наука"
+  };
+  const TOPIC_HINT = {
+    history: "история, войны, короли, революции", politics: "политика, власть, заговоры, скандалы", fashion: "мода, дизайнеры, дома моды, иконы стиля",
+    film: "фильмы и сериалы, съёмки, режиссёры, актёры", pop: "поп-культура, звёзды, мемы, клипы, соцсети", music: "музыка, музыканты, концерты",
+    art: "искусство, художники, скульптура", architecture: "архитектура и архитекторы", literature: "писатели и книги", sport: "спорт и спортсмены", science: "наука и изобретения"
+  };
+  const ICON = {
+    food: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v8M4.5 3v5a2.5 2.5 0 0 0 5 0V3M7 11v10M17 21V3c-2.2 1.2-3.5 3.6-3.5 7v3H17"/></svg>',
+    photo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>'
+  };
   const store = {
     get(k, d = null){ try { const v = localStorage.getItem("gid." + k); return v == null ? d : v; } catch { return d; } },
     set(k, v){ try { v == null ? localStorage.removeItem("gid." + k) : localStorage.setItem("gid." + k, v); } catch {} }
@@ -340,12 +382,15 @@ a{color:var(--accent)}
   const model = () => { const m = store.get("model", "claude-haiku-4-5-20251001"); return MODELS[m] ? m : "claude-haiku-4-5-20251001"; };
   const len = () => LEN[store.get("len", "normal")] ? store.get("len", "normal") : "normal";
   const radius = () => Math.min(10000, Math.max(200, Number(store.get("radius", "1000")) || 1000));
+  const interests = () => { const v = (store.get("interests", "history,politics,fashion,film,pop") || "").split(",").filter(t => TOPICS[t]); return v.length ? v : ["history","politics","fashion","film","pop"]; };
+  const interestsText = () => interests().map(t => TOPIC_HINT[t]).join("; ");
 
   const state = {
     pos: null, place: null, items: [], seen: new Set(JSON.parse(store.get("seen", "[]"))),
     watchId: null, lastFetchPos: null, notified: new Set(), ctl: null, turns: [],
     heading: null, sort: "near", current: null, fitted: false,
-    hooks: (() => { try { return JSON.parse(store.get("hooks2", "{}")); } catch { return {}; } })(),
+    meta: (() => { try { return JSON.parse(store.get("meta3", "{}")); } catch { return {}; } })(),
+    wiki: [], views: [], food: [], foodCands: [], filter: "all",
     teasers: {}, enrichRun: 0
   };
 
@@ -455,11 +500,13 @@ a{color:var(--accent)}
     if (!map) return;
     layer.clearLayers(); markers.clear();
     for (const it of state.items){
-      const cls = "mk" + (it.img ? "" : " dot") + (state.seen.has(it.id) ? "" : " new");
+      const tg = tagsOf(it);
+      const iconKind = !it.img && (it.kind === "food" ? "food" : it.kind === "view" ? "photo" : "");
+      const cls = "mk" + (iconKind ? " ic " + iconKind : it.img ? "" : " dot") + (it.img && tg.has("food") ? " food" : it.img && tg.has("photo") ? " photo" : "") + (state.seen.has(it.id) || iconKind ? "" : " new") + (passes(it) ? "" : " dim");
       const style = it.img ? ` style="background-image:url('${esc(it.img).replace(/'/g, "%27")}')"` : "";
-      const size = it.img ? 40 : 40;
-      const icon = L.divIcon({ className: "", iconSize: [size, size], iconAnchor: [size / 2, size / 2], html: `<div class="${cls}" data-id="${esc(it.id)}"${style}></div>` });
-      const m = L.marker([it.lat, it.lon], { icon, title: it.title, zIndexOffset: it.img ? 100 : 0 }).addTo(layer);
+      const size = 40;
+      const icon = L.divIcon({ className: "", iconSize: [size, size], iconAnchor: [size / 2, size / 2], html: `<div class="${cls}" data-id="${esc(it.id)}"${style}>${iconKind ? ICON[iconKind] : ""}</div>` });
+      const m = L.marker([it.lat, it.lon], { icon, title: it.title, zIndexOffset: passes(it) ? (it.img ? 200 : 100) : 0 }).addTo(layer);
       m.on("click", () => openPlace(it));
       markers.set(it.id, m);
     }
@@ -565,26 +612,105 @@ a{color:var(--accent)}
       it.boring = BORING.test(it.title + " " + it.desc);
       out.push(it);
     }
-    state.items = out;
+    out.forEach(i => { i.kind = "wiki"; });
+    state.wiki = out;
+    state.food = []; state.views = [];
     recalc(true);
     enrich();
+    loadOsm(pos).then(() => { recalc(true); pickFood(); }).catch(() => {});
+  }
+
+  // ---------- OpenStreetMap: food candidates and viewpoints ----------
+  async function loadOsm(pos){
+    const R = Math.min(radius(), 900);
+    const q = `[out:json][timeout:20];(` +
+      `nwr["amenity"~"^(restaurant|cafe|bar|pub|ice_cream|biergarten|food_court)$"]["name"](around:${R},${pos.lat},${pos.lon});` +
+      `nwr["shop"~"^(bakery|pastry|chocolate|cheese|deli|confectionery|coffee|tea|wine)$"]["name"](around:${R},${pos.lat},${pos.lon});` +
+      `nwr["tourism"~"^(viewpoint|artwork)$"](around:${Math.min(radius(), 1500)},${pos.lat},${pos.lon});` +
+      `);out center tags 500;`;
+    const r = await fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: "data=" + enc(q), headers: { "content-type": "application/x-www-form-urlencoded" } });
+    if (!r.ok) return;
+    const j = await r.json();
+    const food = [], views = [];
+    for (const e of j.elements || []){
+      const lat = e.lat ?? e.center?.lat, lon = e.lon ?? e.center?.lon, t = e.tags || {};
+      if (lat == null) continue;
+      const base = { id: `osm:${e.type}${e.id}`, lat, lon, img: "", tags: t, url: t.website || t["contact:website"] || `https://www.openstreetmap.org/${e.type}/${e.id}` };
+      if (t.tourism === "viewpoint" || (t.tourism === "artwork" && (t.name || t.artwork_type === "mural"))){
+        const nm = t["name:ru"] || t.name || (t.tourism === "viewpoint" ? "Смотровая точка" : "Стрит-арт");
+        views.push({ ...base, kind: "view", title: nm, desc: t.tourism === "viewpoint" ? "смотровая точка" : ["арт-объект", t.artist_name].filter(Boolean).join(", "), lang: "" });
+      } else if (t.name){
+        const what = t.amenity || t.shop;
+        food.push({ ...base, kind: "food", title: t.name, desc: [RU_FOOD[what] || what, (t.cuisine || "").replace(/;/g, ", ").replace(/_/g, " ")].filter(Boolean).join(" · "), lang: "" });
+      }
+    }
+    for (const v of views){ state.meta[v.id] ||= { t: ["photo"] }; if (!state.meta[v.id].t?.includes("photo")) state.meta[v.id].t = [...(state.meta[v.id].t || []), "photo"]; }
+    state.views = views.slice(0, 30);
+    for (const f of food) f.dist = haversine(pos, f);
+    state.foodCands = food.sort((a, b) => a.dist - b.dist).slice(0, 70);
+    state.food = [];
+  }
+  const RU_FOOD = { restaurant: "ресторан", cafe: "кафе", bar: "бар", pub: "паб", ice_cream: "мороженое", biergarten: "пивной сад", food_court: "фудкорт", bakery: "пекарня", pastry: "кондитерская", chocolate: "шоколад", cheese: "сыры", deli: "деликатесы", confectionery: "сладости", coffee: "кофе", tea: "чай", wine: "вино" };
+
+  // Claude picks genuinely notable food spots out of real OSM names (never invents new ones)
+  async function pickFood(){
+    if (!state.foodCands.length || !state.pos) return;
+    const areaKey = "food1." + (Math.round(state.pos.lat * 200) / 200) + "." + (Math.round(state.pos.lon * 200) / 200);
+    const apply = picks => {
+      const byId = new Map(state.foodCands.map(f => [f.id, f]));
+      state.food = picks.map(p => { const f = byId.get(p.id); if (!f) return null; state.meta[f.id] = { h: p.h, t: ["food"] }; return f; }).filter(Boolean);
+      recalc(true); renderFilters();
+    };
+    try { const c = JSON.parse(store.get(areaKey, "null")); if (c){ apply(c); return; } } catch {}
+    if (!key()){ renderFilters(); return; }
+    const lines = state.foodCands.map((f, n) => `${n + 1}. ${f.title} (${f.desc || "еда"}, ${fmtDist(f.dist)})`).join("\n");
+    const prompt = `Вот реальные заведения рядом со мной (${wherePhrase()}), по данным OpenStreetMap:\n${lines}\n\nВыбери из списка до 7 мест, которые ты ТОЧНО знаешь как по-настоящему вкусные и известные: легендарные, с наградами (Michelin, лучший багет/круассан города и т.п.), культовые у местных, из гидов и громких обзоров. Не угадывай по названию или кухне: если конкретное место тебе неизвестно, не бери его. Можно вернуть пустой массив.\nДля каждого — фраза по-русски 50–95 символов, живая и конкретная: чем знамениты и что заказать.\nОтветь только JSON: [{"n": номер, "h": "фраза"}]`;
+    try {
+      const text = await claudeStream([{ role: "user", content: prompt }], () => {}, undefined, 700, HOOK_MODEL);
+      const arr = JSON.parse(text.slice(text.indexOf("["), text.lastIndexOf("]") + 1));
+      const picks = (Array.isArray(arr) ? arr : []).map(p => ({ id: state.foodCands[Number(p.n) - 1]?.id, h: String(p.h || "").trim() })).filter(p => p.id && p.h);
+      store.set(areaKey, JSON.stringify(picks));
+      saveMeta();
+      apply(picks);
+    } catch { renderFilters(); }
+  }
+  function saveMeta(){
+    const keys = Object.keys(state.meta); if (keys.length > 600) for (const k of keys.slice(0, keys.length - 600)) delete state.meta[k];
+    store.set("meta3", JSON.stringify(state.meta));
   }
   function recalc(redrawMarkers){
     if (!state.pos) return;
-    for (const it of state.items){
+    const all = [...state.wiki, ...state.views, ...state.food];
+    for (const it of all){
       it.dist = haversine(state.pos, it);
       it.bearing = bearing(state.pos, it);
-      it.score = it.dist * (it.img ? 1 : 2.2) * (it.boring ? 2.5 : 1);
+      const m = state.meta[it.id];
+      const boost = m?.h ? 0.8 : 1;
+      it.score = it.kind === "food" ? it.dist * 0.9 : it.kind === "view" ? it.dist * 1.6 : it.dist * (it.img ? 1 : 2.2) * (it.boring ? 2.5 : 1) * boost;
     }
-    state.items.sort((a, b) => a.score - b.score);
-    state.items = state.items.slice(0, 40);
+    state.wiki.sort((a, b) => a.score - b.score);
+    state.items = [...state.wiki.slice(0, 40), ...state.views, ...state.food].sort((a, b) => a.score - b.score);
+    renderFilters();
     renderList();
     if (redrawMarkers) drawMarkers(); else highlightFront();
   }
 
   const ARROW = '<svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>';
+  const tagsOf = it => { const t = new Set(state.meta[it.id]?.t || []); if (it.kind === "food") t.add("food"); if (it.kind === "view") t.add("photo"); return t; };
+  const passes = it => state.filter === "all" || tagsOf(it).has(state.filter);
+  function renderFilters(){
+    const box = $("filters"); if (!box) return;
+    const keys = ["all", "food", "photo", ...interests()];
+    const count = k => k === "all" ? state.items.length : state.items.filter(i => tagsOf(i).has(k)).length;
+    if (!keys.includes(state.filter)) state.filter = "all";
+    box.innerHTML = keys.map(k => {
+      const label = k === "all" ? "Всё" : k === "food" ? ICON.food + "Вкусно" : k === "photo" ? ICON.photo + "Для фото" : TOPICS[k];
+      const n = count(k);
+      return `<button type="button" class="fchip ${k === "food" || k === "photo" ? k : ""}" data-f="${k}" aria-pressed="${state.filter === k}">${label}${k !== "all" ? ` <small>${n}</small>` : ""}</button>`;
+    }).join("");
+  }
   function sortedForView(){
-    const arr = [...state.items];
+    const arr = state.items.filter(passes);
     if (state.sort === "front" && state.heading != null){
       arr.sort((a, b) => {
         const fa = Math.abs(angDiff(a.bearing, state.heading)), fb = Math.abs(angDiff(b.bearing, state.heading));
@@ -603,27 +729,37 @@ a{color:var(--accent)}
       $("count").textContent = ""; return;
     }
     $("count").textContent = `${state.items.length} мест`;
-    for (const it of sortedForView()){
+    const view = sortedForView();
+    if (!view.length){
+      box.innerHTML = `<p class="msg">${state.filter === "food" ? (key() ? "Рядом не нашлось заведений, про которые гид точно знает, что они вкусные. Пройдись немного или увеличь радиус." : "Вкусные места отбирает Claude, поэтому нужен API-ключ в настройках.") : state.filter === "photo" ? "Рядом пока нет отмеченных точек для фото." : "По этой теме рядом пока ничего. Факты по темам появляются, когда Claude разберёт места, а для этого нужен ключ."}</p>`;
+    }
+    for (const it of view){
       const b = document.createElement("button");
       b.type = "button"; b.className = "row"; b.dataset.id = it.id;
       const rot = state.heading != null ? angDiff(it.bearing, state.heading) : it.bearing;
-      b.innerHTML = (it.img ? `<img class="th" loading="lazy" src="${esc(it.img)}" alt="">` : `<span class="th none" aria-hidden="true">${esc(it.title.charAt(0))}</span>`) +
-        `<span class="tx"><span class="nm">${state.seen.has(it.id) ? "" : '<span class="newdot" title="Ещё не смотрел"></span>'}${esc(it.title)}</span>${hookHtml(it)}</span>` +
+      b.innerHTML = (it.img ? `<img class="th" loading="lazy" src="${esc(it.img)}" alt="">` : `<span class="th none" aria-hidden="true" style="${it.kind === "food" ? "color:var(--food)" : it.kind === "view" ? "color:var(--photo)" : ""}">${it.kind === "food" ? ICON.food : it.kind === "view" ? ICON.photo : esc(it.title.charAt(0))}</span>`) +
+        `<span class="tx"><span class="nm">${state.seen.has(it.id) ? "" : '<span class="newdot" title="Ещё не смотрел"></span>'}${esc(it.title)}${pillsHtml(it)}</span>${hookHtml(it)}</span>` +
         `<span class="rt"><span style="transform:rotate(${rot}deg);display:inline-flex" class="arr">${ARROW}</span>${fmtDist(it.dist)}<span class="dir">${esc(dirText(it))}</span></span>`;
       b.addEventListener("click", () => openPlace(it));
       box.appendChild(b);
     }
   }
+  function pillsHtml(it){
+    const t = tagsOf(it);
+    return (t.has("food") ? `<span class="pill food">${ICON.food}Вкусно</span>` : "") + (t.has("photo") ? `<span class="pill photo">${ICON.photo}Фото</span>` : "");
+  }
   function hookHtml(it){
-    const h = state.hooks[it.id];
+    const h = state.meta[it.id]?.h;
     if (h) return `<span class="hk">${esc(h)}</span>`;
     const t = state.teasers[it.id] || it.desc;
     return t ? `<span class="ds">${esc(t)}</span>` : "";
   }
   function refreshHooks(){
     const byId = new Map(state.items.map(i => [i.id, i]));
+    renderFilters();
     document.querySelectorAll("#list .row").forEach(r => {
       const it = byId.get(r.dataset.id); if (!it) return;
+      const nm = r.querySelector(".nm"); nm.querySelectorAll(".pill").forEach(p => p.remove()); nm.insertAdjacentHTML("beforeend", pillsHtml(it));
       const tx = r.querySelector(".tx"); const old = tx.querySelector(".hk,.ds");
       const html = hookHtml(it); if (!html) return;
       const tmp = document.createElement("span"); tmp.innerHTML = html;
@@ -634,7 +770,7 @@ a{color:var(--accent)}
   // Wikipedia teasers for every place + one cheap Claude call for catchy one-liners
   async function enrich(){
     const run = ++state.enrichRun;
-    const top = state.items.slice(0, 24);
+    const top = state.wiki.slice(0, 24);
     const need = top.filter(i => !state.teasers[i.id]);
     const byLang = {};
     for (const i of need) (byLang[i.lang] ||= []).push(i);
@@ -659,18 +795,23 @@ a{color:var(--accent)}
     }
     refreshHooks();
     if (!key()) return;
-    const noHook = top.filter(i => !state.hooks[i.id] && (i._full || i.desc)).slice(0, 16);
+    const noHook = top.filter(i => !state.meta[i.id]?.h && (i._full || i.desc)).slice(0, 16);
     if (noHook.length < 1) return;
     const lines = noHook.map((i, n) => `${n + 1}. ${i.title}${i.desc ? " — " + i.desc : ""}\n   ${(i._full || "").slice(0, 400)}`).join("\n");
-    const prompt = `Ты пишешь крючки для карточек в приложении-гиде. Для каждого места ниже придумай ОДНУ фразу по-русски, 50–95 символов, разговорную, с самым сильным конкретным фактом: имя, год, цифра, скандал, рекорд, судьба человека или связь с кино/звездой. Фраза должна быть понятна сама по себе: не «здесь жил один человек», а кто именно. Без названия места в начале, без эмодзи, без кавычек, без «представь» и «прикинь». Опирайся только на текст ниже и на то, в чём полностью уверен. Никаких выдумок: если конкретного факта нет, верни пустую строку.\n\n${lines}\n\nОтветь только JSON-массивом строк в том же порядке, ровно ${noHook.length} элементов.`;
+    const topicList = Object.keys(TOPICS).join(", ");
+    const prompt = `Ты размечаешь места для приложения-гида. Для каждого места ниже верни объект:\n- "h": ОДНА фраза-крючок по-русски, 50–95 символов, разговорная, с интригой и самым сильным конкретным фактом (имя, год, цифра, скандал, рекорд, судьба человека, связь с кино, модой или звездой). Фраза понятна сама по себе: не «здесь жил один человек», а кто именно. Лучше всего факт, который цепляет темы: ${interestsText()}. Без названия места в начале, без эмодзи, без кавычек. Если конкретного факта нет, пустая строка.\n- "t": массив тем из списка [${topicList}, photo], к которым у места есть РЕАЛЬНАЯ связь (0–3 темы). "photo" ставь, только если место правда фотогеничное: эффектный фасад, вид, интерьер, знаменитый ракурс.\n- "p": если есть "photo", короткий совет для кадра до 90 символов (откуда снимать, какое время суток), иначе пустая строка.\nОпирайся только на текст ниже и на то, в чём полностью уверен. Никаких выдумок.\n\n${lines}\n\nОтветь только JSON-массивом из ровно ${noHook.length} объектов в том же порядке.`;
     try {
-      const text = await claudeStream([{ role: "user", content: prompt }], () => {}, undefined, 60 * noHook.length + 100, HOOK_MODEL);
+      const text = await claudeStream([{ role: "user", content: prompt }], () => {}, undefined, 110 * noHook.length + 150, HOOK_MODEL);
       if (run !== state.enrichRun) return;
       const arr = JSON.parse(text.slice(text.indexOf("["), text.lastIndexOf("]") + 1));
-      noHook.forEach((i, n) => { const h = String(arr[n] || "").trim(); if (h) state.hooks[i.id] = h; });
-      const keys = Object.keys(state.hooks); if (keys.length > 400) for (const k of keys.slice(0, keys.length - 400)) delete state.hooks[k];
-      store.set("hooks2", JSON.stringify(state.hooks)); store.set("hooks", null);
-      refreshHooks();
+      noHook.forEach((i, n) => {
+        const o = arr[n]; if (!o) return;
+        const obj = typeof o === "string" ? { h: o } : o;
+        const t = (Array.isArray(obj.t) ? obj.t : []).map(String).filter(x => TOPICS[x] || x === "photo");
+        state.meta[i.id] = { h: String(obj.h || "").trim(), t, p: String(obj.p || "").trim() };
+      });
+      saveMeta(); store.set("hooks2", null);
+      refreshHooks(); drawMarkers();
     } catch {}
   }
 
@@ -744,12 +885,14 @@ a{color:var(--accent)}
 
 Главное — конкретика. Каждое утверждение с именами, годами, цифрами и деталями: кто именно, когда, что сделал, чем кончилось. Запрещены размытые формулы: «один человек», «когда-то», «некий», «одна пьеса», «трудные времена», «говорят, что тут что-то было». Если дразнишь интригой, раскрой её в том же или следующем предложении: назвал загадку — сразу дай ответ с именем. Если не знаешь, кто это был, не заводи эту тему вообще.
 
+Интрига: строй рассказ как маленький детектив. Начни с детали, мимо которой все проходят, или со странного факта, который требует объяснения, и раскрой его через одно-два предложения. Между историями оставляй мостик-крючок, который тянет дальше, и обязательно раскрывай его следующим абзацем. Держи напряжение до последней фразы: лучшую развязку прибереги под конец.
+
 Дофамин даёт сама история, а не восклицания: неожиданный факт в первой же фразе, резкие повороты, контрасты «было — стало», абсурдные цифры, скандалы, судьбы людей, связи с кино, музыкой и звёздами. Предложения короткие и ритмичные, их легко произносить.
 
 Запрещённые слова-паразиты и штампы: «Так, стоп», «А теперь внимание», «Представляете?!», «И вот тут начинается самое интересное», «Короче», «Ребята», «Друзья», «Прикиньте», «Сейчас будет жёстко», «Как в кино», «Вы не поверите». Никаких риторических вопросов вместо фактов, никакого канцелярита, никаких списков.
 
 Правда важнее эффектности: не выдумывай факты, даты, цифры и цитаты. Если материала мало, лучше короче, но точно.`;
-  const fmt = () => `Формат: связный устный рассказ короткими абзацами по 1–3 предложения, ${LEN[len()].words}. Сюжет: ${LEN[len()].secs}. Первое предложение — самый сильный конкретный факт с именем или цифрой, без разгона. Можно 1–3 коротких подзаголовка через «## », которые обещают конкретное (например, имя или событие), а не общие «самое дикое». Без списков, без эмодзи, без вступлений.`;
+  const fmt = () => `Слушателям особенно интересны темы: ${interestsText()}. Если у места есть реальные связи с ними, выводи их вперёд; нет связи — не притягивай. Формат: связный устный рассказ короткими абзацами по 1–3 предложения, ${LEN[len()].words}. Сюжет: ${LEN[len()].secs}. Первое предложение — самый сильный конкретный факт с именем или цифрой, без разгона. Можно 1–3 коротких подзаголовка через «## », которые обещают конкретное (например, имя или событие), а не общие «самое дикое». Без списков, без эмодзи, без вступлений.`;
   function wherePhrase(){
     const pl = state.place; if (!pl) return state.pos ? `координаты ${state.pos.lat.toFixed(5)}, ${state.pos.lon.toFixed(5)}` : "";
     return [pl.street, pl.hood, pl.city, pl.country].filter(Boolean).join(", ");
@@ -836,7 +979,7 @@ a{color:var(--accent)}
     state.ctl?.abort(); state.ctl = new AbortController(); state.turns = [];
     const im = $("pImg");
     if (img){ im.src = img; im.hidden = false; } else { im.hidden = true; im.removeAttribute("src"); }
-    $("pTitle").textContent = title; $("pMeta").innerHTML = meta || ""; $("pHook").hidden = true;
+    $("pTitle").textContent = title; $("pMeta").innerHTML = meta || ""; $("pHook").hidden = true; $("pTip").hidden = true;
     stopSpeak(); $("speak").hidden = true;
     $("pQa").innerHTML = ""; $("askForm").hidden = true; $("pFoot").hidden = true; $("pActions").innerHTML = "";
     if ($("sheet").hidden) openSheet("sheet");
@@ -915,10 +1058,13 @@ a{color:var(--accent)}
       meta: `<span class="m">${fmtDist(it.dist)} · ~${walkMin(it.dist)} мин · ${esc(dir)}</span>` + (it.desc ? `<span>${esc(it.desc)}</span>` : "")
     });
     const im = $("pImg"); if (it.img) im.onerror = () => { im.onerror = null; im.src = it.img; };
-    if (state.hooks[it.id]){ $("pHook").textContent = state.hooks[it.id]; $("pHook").hidden = false; }
-    $("pStory").innerHTML = `<p class="wiki">${dots} Листаю Википедию</p>`;
+    const mt = state.meta[it.id] || {};
+    if (mt.h){ $("pHook").textContent = mt.h; $("pHook").hidden = false; }
+    if (mt.p){ $("pTip").className = "tip"; $("pTip").innerHTML = ICON.photo + `<span><b>Кадр:</b> ${esc(mt.p)}</span>`; $("pTip").hidden = false; }
     const nav = `https://www.google.com/maps/dir/?api=1&travelmode=walking&destination=${it.lat},${it.lon}`;
     const signal = state.ctl.signal;
+    if (it.kind === "food" || it.kind === "view") return openOsmPlace(it, dir, nav);
+    $("pStory").innerHTML = `<p class="wiki">${dots} Листаю Википедию</p>`;
     const extract = await wikiExtract(it);
     if (signal.aborted) return;
     $("pActions").innerHTML =
@@ -929,7 +1075,8 @@ a{color:var(--accent)}
     const full = await wikiFull(it);
     if (signal.aborted) return;
     const material = (full.length > extract.length ? full : extract).slice(0, 7000);
-    const prompt = `${VOICE}\n\nМесто: «${it.title}»${it.desc ? " (" + it.desc + ")" : ""}. ${where}\nСтатья из Википедии как главный источник фактов (выбери из неё самые яркие истории с именами и цифрами; добавляй своё, только если уверен):\n"""${material}"""\n\nРасскажи нам про это место. ${fmt()}`;
+    const photoAsk = tagsOf(it).has("photo") ? " В самом конце одной-двумя фразами подскажи, откуда и в какое время лучший кадр." : "";
+    const prompt = `${VOICE}\n\nМесто: «${it.title}»${it.desc ? " (" + it.desc + ")" : ""}. ${where}\nСтатья из Википедии как главный источник фактов (выбери из неё самые яркие истории с именами и цифрами; добавляй своё, только если уверен):\n"""${material}"""\n\nРасскажи нам про это место. ${fmt()}${photoAsk}`;
     runStory({
       id: it.id, prompt,
       fallbackHtml: extract ? md(extract.split("\n").slice(0, 4).join("\n\n")) : `<p class="wiki">В Википедии про это место почти ничего нет.</p>`,
@@ -937,11 +1084,37 @@ a{color:var(--accent)}
     });
   }
 
+  function openOsmPlace(it, dir, nav){
+    const t = it.tags || {};
+    const city = [state.place?.city, state.place?.country].filter(Boolean).join(", ");
+    const q = enc([it.title, t["addr:street"], state.place?.city].filter(Boolean).join(" "));
+    const addr = [t["addr:housenumber"], t["addr:street"]].filter(Boolean).join(" ");
+    if (it.kind === "food") $("pTip").className = "tip food";
+    $("pActions").innerHTML =
+      `<a class="btn btn-main" href="${nav}" target="_blank" rel="noopener">Маршрут</a>` +
+      `<a class="btn btn-ghost" href="https://www.google.com/maps/search/?api=1&query=${q}" target="_blank" rel="noopener">${it.kind === "food" ? "Отзывы и часы" : "На карте"}</a>` +
+      `<a class="btn btn-ghost" href="https://www.google.com/search?tbm=isch&q=${q}" target="_blank" rel="noopener">Фото</a>` +
+      (t.website || t["contact:website"] ? `<a class="btn btn-ghost" href="${esc(t.website || t["contact:website"])}" target="_blank" rel="noopener">Сайт</a>` : "");
+    const facts = [it.desc, addr && "адрес: " + addr, t.opening_hours && "часы: " + t.opening_hours].filter(Boolean).join("; ");
+    const where = `Я стою в ${fmtDist(it.dist)}, место от меня ${dir}. Я сейчас: ${wherePhrase()}.`;
+    let prompt;
+    if (it.kind === "food"){
+      prompt = `${VOICE}\n\nЗаведение «${it.title}» (${facts}), ${city}. ${where}\nРасскажи нам про него: чем оно знаменито, его история и люди за ним, кто из известных тут бывал (только если точно знаешь), что обязательно заказать, когда лучше прийти, какие цены примерно. Если это место тебе на самом деле не знакомо, честно скажи это одной фразой и дай общий совет по такому типу заведений в этом районе, ничего не выдумывая. ${LEN.short.words}, короткие абзацы, без списков, без эмодзи.`;
+    } else {
+      prompt = `${VOICE}\n\nТочка «${it.title}» (${facts}), ${city}. ${where}\nЭто ${it.desc || "точка для фото"}. Расскажи, что отсюда видно или что это за объект, если знаешь его историю, и как снять лучший кадр: откуда, в какое время суток, какой ракурс. Если не знаешь конкретно эту точку, скажи честно и дай совет по съёмке без выдумок. ${LEN.short.words}, короткие абзацы, без списков, без эмодзи.`;
+    }
+    runStory({
+      id: it.id, prompt, maxTokens: 600,
+      fallbackHtml: `<p class="wiki">${esc(state.meta[it.id]?.h || it.desc || "")}</p>`,
+      appPrompt: prompt
+    });
+  }
+
   function lookAround(){
     if (!state.pos) return;
     const hasH = state.heading != null;
     const pool = state.items.filter(i => i.dist < 600).slice(0, 14);
-    const lines = pool.map(i => `- ${i.title}${i.desc ? " (" + i.desc + ")" : ""}: ${fmtDist(i.dist)}, ${hasH ? relWord(angDiff(i.bearing, state.heading)) : compassWord(i.bearing)}`).join("\n");
+    const lines = pool.map(i => { const m = state.meta[i.id]; const tg = [...tagsOf(i)].map(x => x === "food" ? "вкусно" : x === "photo" ? "для фото" : TOPICS[x]).join(", "); return `- ${i.title}${i.desc ? " (" + i.desc + ")" : ""}: ${fmtDist(i.dist)}, ${hasH ? relWord(angDiff(i.bearing, state.heading)) : compassWord(i.bearing)}${tg ? "; метки: " + tg : ""}${m?.h ? "; факт: " + m.h : ""}`; }).join("\n");
     const orient = hasH ? `Я смотрю ${compassWord(state.heading)} (${Math.round(state.heading)}°). Направления ниже даны относительно того, куда я смотрю.` : `Компас выключен, поэтому направления ниже по сторонам света.`;
     const prompt = `${VOICE}\n\nЯ только что пришёл сюда и вообще не знаю этот город: ${wherePhrase()}. ${orient}\nЧто есть рядом по Википедии:\n${lines || "(в Википедии рядом почти ничего)"}\n\nМы с друзьями стоим тут и крутим головами. Проведи нас взглядом, как экскурсовод, живой речью: ${hasH ? "начни с того, что прямо перед нами, потом «а теперь гляньте направо», налево, и «обернитесь»." : "пройдись по сторонам света: «гляньте на север…»."} Говори, на что смотреть глазами (здания, шпили, вывески, деревья), что это и какая там дичь или байка. Закончи подзаголовком «## Куда рванём первым» и одним-двумя советами, куда шагнуть прямо сейчас и сколько идти. Короткие абзацы, без списков, ${len() === "short" ? "120–180" : len() === "long" ? "350–500" : "200–320"} слов, без эмодзи, сразу с крючка.`;
     prepSheet({
@@ -1049,7 +1222,15 @@ a{color:var(--accent)}
   });
 
   // ---------- settings ----------
+  function renderInterestChips(sel){
+    $("interestChips").innerHTML = Object.entries(TOPICS).map(([k, v]) => `<button type="button" class="fchip" data-i="${k}" aria-pressed="${sel.includes(k)}">${v}</button>`).join("");
+  }
+  $("interestChips").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    b.setAttribute("aria-pressed", b.getAttribute("aria-pressed") !== "true");
+  });
   function openSettings(){
+    renderInterestChips(interests());
     $("apiKey").value = key(); $("radius").value = radius(); $("sMsg").hidden = true;
     document.querySelectorAll('input[name="model"]').forEach(r => { r.checked = r.value === model(); });
     document.querySelectorAll("#lenSeg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.len === len()));
@@ -1065,6 +1246,9 @@ a{color:var(--accent)}
     store.set("key", k || null);
     const m = document.querySelector('input[name="model"]:checked'); if (m) store.set("model", m.value);
     const l = document.querySelector('#lenSeg button[aria-pressed="true"]'); if (l) store.set("len", l.dataset.len);
+    const ints = [...document.querySelectorAll('#interestChips button[aria-pressed="true"]')].map(b => b.dataset.i);
+    if (ints.length) store.set("interests", ints.join(","));
+    renderFilters(); renderList();
     const oldR = radius(); store.set("radius", String($("radius").value || 1000));
     $("sMsg").hidden = false; $("sMsg").className = "msg"; $("sMsg").textContent = "Сохранено.";
     $("keyNote").hidden = !!k || !state.items.length;
@@ -1080,6 +1264,11 @@ a{color:var(--accent)}
   $("lookAround").addEventListener("click", lookAround);
   $("areaStory").addEventListener("click", areaStory);
   $("sortNear").addEventListener("click", () => setSort("near"));
+  $("filters").addEventListener("click", e => {
+    const b = e.target.closest(".fchip"); if (!b) return;
+    state.filter = b.dataset.f === state.filter && b.dataset.f !== "all" ? "all" : b.dataset.f;
+    renderFilters(); renderList(); drawMarkers();
+  });
   $("sortFront").addEventListener("click", () => { if (state.heading == null){ toggleCompass(); return; } setSort("front"); });
   $("walk").addEventListener("change", e => e.target.checked ? startWalk() : stopWalk());
   $("closeSheet").addEventListener("click", back);
