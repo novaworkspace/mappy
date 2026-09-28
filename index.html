@@ -14,11 +14,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
 :root{
   color-scheme:light;
   --bg:#EEF1EC; --surface:#FFFFFF; --surface-2:#F5F7F4; --ink:#15201C; --muted:#5B6863; --line:#D3DBD5;
-  --accent:#2440E6; --accent-ink:#FFFFFF; --hi:#FFD23F; --hi-ink:#15201C; --warn:#C8237A;
+  --accent:#2440E6; --accent-ink:#FFFFFF; --accent-soft:rgba(36,64,230,.16); --hi:#FFD23F; --hi-ink:#15201C; --warn:#C8237A;
   --shadow:0 12px 32px -16px rgba(21,32,28,.35);
   --display:"Unbounded","Arial Black",system-ui,sans-serif;
   --body:"Onest",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
@@ -29,68 +30,107 @@
   :root{
     color-scheme:dark;
     --bg:#0F1513; --surface:#182120; --surface-2:#141C1A; --ink:#E7EEEA; --muted:#98A6A0; --line:#2A3632;
-    --accent:#8497FF; --accent-ink:#0F1513; --hi:#E9BE2B; --hi-ink:#0F1513; --warn:#F06AB0;
+    --accent:#8497FF; --accent-ink:#0F1513; --accent-soft:rgba(132,151,255,.2); --hi:#E9BE2B; --hi-ink:#0F1513; --warn:#F06AB0;
     --shadow:0 12px 32px -16px rgba(0,0,0,.8);
   }
 }
 *{box-sizing:border-box}
 html,body{margin:0}
 body{background:var(--bg);color:var(--ink);font:16px/1.55 var(--body);-webkit-tap-highlight-color:transparent;
-  padding-inline:16px;padding-block:calc(var(--safe-t) + 14px) calc(var(--safe-b) + 40px)}
-button,input{font:inherit;color:inherit}
+  padding-inline:16px;padding-block:calc(var(--safe-t) + 12px) calc(var(--safe-b) + 40px)}
+button,input,select{font:inherit;color:inherit}
 a{color:var(--accent)}
 :focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:8px}
 [hidden]{display:none!important}
-.app{max-width:760px;margin:0 auto;display:grid;gap:18px}
+.app{max-width:760px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
 
-.top{display:flex;align-items:center;gap:12px}
-.pin{width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--accent);display:grid;place-items:center;flex:none}
-.pin::after{content:"";width:11px;height:11px;border-radius:50%;background:var(--hi)}
-.brand{font-family:var(--display);font-weight:800;font-size:19px;line-height:1;flex:1}
-.icon-btn{width:42px;height:42px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);display:grid;place-items:center;cursor:pointer}
+.top{display:flex;align-items:center;gap:10px}
+.pin{width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--accent);display:grid;place-items:center;flex:none}
+.pin::after{content:"";width:10px;height:10px;border-radius:50%;background:var(--hi)}
+.brand{font-family:var(--display);font-weight:800;font-size:17px;line-height:1.1;flex:1;min-width:0}
+.brand small{display:block;font-family:var(--body);font-weight:500;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
+.icon-btn{width:42px;height:42px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);display:grid;place-items:center;cursor:pointer;flex:none;padding:0}
 .icon-btn svg{width:20px;height:20px}
 
-.here{background:var(--surface);border-radius:20px;padding:18px;display:grid;gap:10px;box-shadow:var(--shadow)}
-.eyebrow{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
-.here h1{font-family:var(--display);font-weight:700;font-size:clamp(22px,6vw,30px);line-height:1.12;margin:0;letter-spacing:-.015em;text-wrap:balance}
-.here h1 mark{background:linear-gradient(transparent 60%,var(--hi) 60%);color:inherit}
-.coords{font-family:var(--mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 16px;border-radius:14px;border:0;cursor:pointer;font-weight:600;text-decoration:none;line-height:1.2}
+/* map */
+.mapwrap{position:relative;border-radius:22px;overflow:hidden;box-shadow:var(--shadow);background:var(--surface-2);height:min(52vh,460px);min-height:280px}
+#map{position:absolute;inset:0;z-index:1;background:var(--surface-2)}
+.leaflet-container{font:inherit;background:var(--surface-2)}
+.leaflet-control-attribution{font-size:10px!important;background:color-mix(in srgb,var(--surface) 80%,transparent)!important;color:var(--muted)!important}
+.leaflet-control-attribution a{color:var(--muted)!important}
+.map-empty{position:absolute;inset:0;z-index:2;display:grid;place-items:center;align-content:center;gap:14px;text-align:center;padding:24px;
+  background:radial-gradient(circle at 50% 45%,var(--accent-soft),transparent 60%),repeating-linear-gradient(0deg,transparent 0 39px,var(--line) 39px 40px),repeating-linear-gradient(90deg,transparent 0 39px,var(--line) 39px 40px),var(--surface-2)}
+.map-empty h1{font-family:var(--display);font-weight:700;font-size:clamp(22px,6vw,28px);line-height:1.15;margin:0;max-width:18ch;text-wrap:balance}
+.map-empty h1 mark{background:linear-gradient(transparent 60%,var(--hi) 60%);color:inherit}
+.map-empty p{margin:0;color:var(--muted);font-size:14px;max-width:34ch}
+.overlay-tl{position:absolute;z-index:500;top:10px;left:10px;right:64px;pointer-events:none}
+.where-chip{display:inline-flex;flex-direction:column;max-width:100%;background:var(--surface);border-radius:14px;padding:8px 12px;box-shadow:var(--shadow);pointer-events:auto}
+.where-chip b{font-weight:700;font-size:14.5px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.where-chip span{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.overlay-r{position:absolute;z-index:500;top:10px;right:10px;display:grid;gap:8px}
+.fab{width:44px;height:44px;border-radius:14px;border:0;background:var(--surface);box-shadow:var(--shadow);display:grid;place-items:center;cursor:pointer;padding:0}
+.fab svg{width:21px;height:21px}
+.fab.on{background:var(--accent);color:var(--accent-ink)}
+.heading-badge{position:absolute;z-index:500;left:10px;bottom:22px;font-family:var(--mono);font-size:12px;background:var(--surface);border-radius:999px;padding:4px 10px;box-shadow:var(--shadow);font-variant-numeric:tabular-nums}
+
+/* markers */
+.mk{width:40px;height:40px;border-radius:50%;border:3px solid var(--surface);background:var(--surface-2) center/cover no-repeat;box-shadow:0 3px 10px rgba(0,0,0,.35);transition:transform .15s}
+.mk.dot{width:16px;height:16px;border-width:2.5px;background:var(--muted);margin:12px}
+.mk.new{border-color:var(--hi)}
+.mk.front{transform:scale(1.18);border-color:var(--accent)}
+.me{width:120px;height:120px;position:relative;pointer-events:none}
+.me .cone{position:absolute;inset:0;transform:rotate(var(--h,0deg));transition:transform .15s linear}
+.me .cone[hidden]{display:none}
+.me .dotme{position:absolute;left:50%;top:50%;width:20px;height:20px;margin:-10px 0 0 -10px;border-radius:50%;background:var(--accent);border:3px solid #fff;box-shadow:0 0 0 6px var(--accent-soft)}
+
+/* actions */
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 16px;border-radius:14px;border:0;cursor:pointer;font-weight:600;text-decoration:none;line-height:1.2}
 .btn svg{width:18px;height:18px;flex:none}
 .btn-main{background:var(--accent);color:var(--accent-ink)}
-.btn-ghost{background:transparent;border:1.5px solid var(--line);color:var(--ink)}
+.btn-ghost{background:var(--surface);border:1.5px solid var(--line);color:var(--ink)}
 .btn-hi{background:var(--hi);color:var(--hi-ink)}
 .btn[disabled]{opacity:.5;cursor:default}
-.toggle{display:inline-flex;align-items:center;gap:10px;font-size:14px;font-weight:500;cursor:pointer;user-select:none}
+.actions .btn{flex:1 1 auto}
+.toggle{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:500;cursor:pointer;user-select:none;color:var(--muted)}
 .toggle input{flex:none;appearance:none;width:42px;height:24px;border-radius:999px;background:var(--line);position:relative;cursor:pointer;margin:0;transition:background .2s}
 .toggle input::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--surface);transition:transform .2s}
 .toggle input:checked{background:var(--accent)}
 .toggle input:checked::after{transform:translateX(18px)}
 .msg{font-size:14px;color:var(--muted);margin:0}
 .msg.err{color:var(--warn)}
-
 .dots{display:inline-flex;gap:4px;vertical-align:middle}
 .dots i{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:b 1s infinite ease-in-out}
 .dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
 @keyframes b{0%,80%,100%{transform:translateY(0);opacity:.4}40%{transform:translateY(-5px);opacity:1}}
 
-.list-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
-.list-head h2{font-family:var(--display);font-weight:500;font-size:16px;margin:0}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
-.card{position:relative;display:grid;grid-template-rows:auto 1fr;text-align:left;border:0;padding:0;border-radius:16px;overflow:hidden;background:var(--surface);cursor:pointer;box-shadow:0 1px 0 var(--line)}
-.card .ph{aspect-ratio:4/3;width:100%;max-width:100%;object-fit:cover;display:block;background:var(--surface-2)}
-.card .noph{aspect-ratio:4/3;display:grid;place-items:center;background:repeating-linear-gradient(135deg,var(--surface-2) 0 10px,var(--bg) 10px 20px);color:var(--muted);font-family:var(--display);font-size:28px}
-.card .tx{padding:10px 12px 12px;display:grid;gap:4px;align-content:start}
-.card .nm{font-weight:700;font-size:15px;line-height:1.25}
-.card .ds{font-size:13px;color:var(--muted);line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.dist{position:absolute;top:8px;left:8px;background:var(--surface);color:var(--ink);font-family:var(--mono);font-size:12px;font-weight:500;padding:3px 8px;border-radius:999px;font-variant-numeric:tabular-nums}
-.card.new .dist{background:var(--hi);color:var(--hi-ink)}
+/* list */
+.list-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.seg{display:inline-flex;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;padding:7px 12px;border-radius:9px;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.seg button[disabled]{opacity:.45;cursor:default}
+.list{display:grid;gap:8px;margin-top:10px}
+.row{display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;width:100%;text-align:left;border:0;padding:8px 12px 8px 8px;border-radius:16px;background:var(--surface);cursor:pointer;box-shadow:0 1px 0 var(--line)}
+.row:active{transform:scale(.99)}
+.row.sel{box-shadow:inset 0 0 0 2px var(--accent)}
+.th{width:64px;height:64px;border-radius:12px;object-fit:cover;display:block;background:var(--surface-2)}
+.th.none{display:grid;place-items:center;font-family:var(--display);font-size:22px;color:var(--muted);background:repeating-linear-gradient(135deg,var(--surface-2) 0 8px,var(--bg) 8px 16px)}
+.tx{min-width:0;display:grid;gap:2px}
+.nm{font-weight:700;font-size:15px;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.ds{font-size:13px;color:var(--muted);line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.hk{font-size:13.5px;font-weight:500;line-height:1.35;color:var(--ink);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  background:linear-gradient(transparent 62%,color-mix(in srgb,var(--hi) 45%,transparent) 62%);background-size:100% 1.35em;padding-right:2px}
+.sheet .hook{font-size:17px;font-weight:600;line-height:1.35;margin:0;max-width:40ch}
+.rt{display:grid;justify-items:end;gap:4px;font-family:var(--mono);font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--ink)}
+.rt .dir{font-family:var(--body);font-size:11.5px;color:var(--muted)}
+.arrow{width:22px;height:22px;color:var(--accent);transition:transform .2s}
+.newdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--hi);margin-right:6px;vertical-align:2px}
 
 /* sheet */
-.sheet{position:fixed;inset:0;z-index:20;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch}
+.sheet{position:fixed;inset:0;z-index:2000;background:var(--bg);overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
 .sheet-bar{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:calc(var(--safe-t) + 10px) 16px 10px;background:linear-gradient(var(--bg) 70%,transparent)}
-.sheet-body{max-width:760px;margin:0 auto;padding:0 16px calc(var(--safe-b) + 40px);display:grid;gap:16px}
+.sheet-body{max-width:760px;margin:0 auto;padding:0 16px calc(var(--safe-b) + 40px);display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
 .hero{width:100%;max-width:100%;max-height:52vh;object-fit:cover;border-radius:20px;display:block;background:var(--surface-2)}
 .sheet h2{font-family:var(--display);font-weight:700;font-size:clamp(24px,6.5vw,32px);line-height:1.1;margin:0;letter-spacing:-.02em;text-wrap:balance}
 .meta{display:flex;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
@@ -107,18 +147,28 @@ a{color:var(--accent)}
 .caret::after{content:"▍";color:var(--accent);animation:blink 1s steps(1) infinite}
 @keyframes blink{50%{opacity:0}}
 .wiki{font-size:15px;color:var(--muted);margin:0}
+.story-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--muted);font-family:var(--mono)}
+.linkbtn{border:0;background:none;color:var(--accent);font:600 13px var(--body);cursor:pointer;padding:4px 0}
 .ask{display:flex;gap:8px}
 .ask input{flex:1;min-width:0;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface)}
 .q{font-weight:600;border-left:3px solid var(--hi);padding:6px 12px;margin:14px 0 8px}
+.sheet .row-actions{display:flex;gap:8px;flex-wrap:wrap}
 
 /* settings */
 .field{display:grid;gap:6px}
-.field label{font-weight:600;font-size:14px}
-.field input{padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);font-family:var(--mono);font-size:14px}
+.field > label,.field > .lbl{font-weight:600;font-size:14px}
+.field input[type=password],.field input[type=number]{padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);font-family:var(--mono);font-size:14px}
+.choices{display:grid;gap:8px}
+.choice{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;padding:12px 14px;border-radius:14px;background:var(--surface);border:1.5px solid var(--line);cursor:pointer}
+.choice:has(input:checked){border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.choice input{margin:3px 0 0;accent-color:var(--accent);width:18px;height:18px}
+.choice b{display:block;font-size:15px}
+.choice span{font-size:13px;color:var(--muted)}
+.cost{font-family:var(--mono);font-size:12px;color:var(--ink);background:var(--surface-2);border-radius:6px;padding:1px 6px;margin-left:4px}
 .card-note{background:var(--surface);border-radius:16px;padding:14px 16px;font-size:14px;color:var(--muted)}
 .card-note b{color:var(--ink)}
 
-.toast{position:fixed;left:16px;right:16px;bottom:calc(var(--safe-b) + 16px);z-index:30;max-width:520px;margin:0 auto;background:var(--ink);color:var(--bg);border-radius:16px;padding:12px 14px;display:flex;gap:12px;align-items:center;box-shadow:var(--shadow);cursor:pointer}
+.toast{position:fixed;left:16px;right:16px;bottom:calc(var(--safe-b) + 16px);z-index:3000;max-width:520px;margin:0 auto;background:var(--ink);color:var(--bg);border-radius:16px;padding:12px 14px;display:flex;gap:12px;align-items:center;box-shadow:var(--shadow);cursor:pointer}
 .toast img{width:52px;height:52px;border-radius:10px;object-fit:cover;flex:none}
 .toast b{display:block}
 .toast span{font-size:13px;opacity:.8}
@@ -130,41 +180,63 @@ a{color:var(--accent)}
 <main class="app">
   <header class="top">
     <div class="pin" aria-hidden="true"></div>
-    <div class="brand">Болтливый гид</div>
+    <div class="brand">Болтливый гид<small id="sub">Открывай город вокруг себя</small></div>
     <label class="icon-btn" for="cam" title="Сфоткать, что вижу" aria-label="Сфоткать, что вижу">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
     </label>
     <input id="cam" type="file" accept="image/*" capture="environment">
     <button class="icon-btn" id="openSettings" type="button" aria-label="Настройки">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
     </button>
   </header>
 
-  <section class="here" aria-live="polite">
-    <span class="eyebrow" id="hereLabel">Где ты</span>
-    <h1 id="hereTitle">Нажми кнопку, и я <mark>осмотрюсь</mark></h1>
-    <span class="coords" id="coords"></span>
-    <div class="row">
+  <section class="mapwrap" aria-label="Карта вокруг тебя">
+    <div id="map"></div>
+    <div class="map-empty" id="mapEmpty">
+      <h1>Где мы <mark>сейчас</mark>?</h1>
+      <p>Покажу на карте, что интересного вокруг, и расскажу про каждое место.</p>
       <button class="btn btn-main" id="locate" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
-        <span id="locateText">Где я?</span>
+        <span id="locateText">Найти меня</span>
       </button>
-      <button class="btn btn-ghost" id="areaStory" type="button" hidden>Про район</button>
     </div>
-    <label class="toggle"><input type="checkbox" id="walk"> Режим прогулки: подскажу, когда подойдёшь к чему-то интересному</label>
-    <p class="msg" id="msg" hidden></p>
+    <div class="overlay-tl" id="whereBox" hidden>
+      <div class="where-chip"><b id="whereStreet"></b><span id="whereHood"></span></div>
+    </div>
+    <div class="overlay-r" id="mapBtns" hidden>
+      <button class="fab" id="recenter" type="button" aria-label="Обновить и показать меня">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+      </button>
+      <button class="fab" id="compass" type="button" aria-label="Компас: учитывать, куда я смотрю" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M12 5.5l2.6 6.5-2.6 6.5-2.6-6.5z" fill="currentColor" fill-opacity=".25"/></svg>
+      </button>
+    </div>
+    <span class="heading-badge" id="headingBadge" hidden></span>
   </section>
+
+  <div class="actions" id="actions" hidden>
+    <button class="btn btn-hi" id="lookAround" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+      Оглядеться
+    </button>
+    <button class="btn btn-ghost" id="areaStory" type="button">Про район</button>
+  </div>
+  <label class="toggle" id="walkRow" hidden><input type="checkbox" id="walk"> Режим прогулки: дам знать, когда подойдёшь к чему-то интересному</label>
+  <p class="msg" id="msg" hidden></p>
 
   <section id="listWrap" hidden>
     <div class="list-head">
-      <h2>Рядом с тобой</h2>
+      <div class="seg" role="group" aria-label="Сортировка">
+        <button type="button" id="sortNear" aria-pressed="true">Ближе всего</button>
+        <button type="button" id="sortFront" aria-pressed="false">Передо мной</button>
+      </div>
       <span class="msg" id="count"></span>
     </div>
-    <div class="grid" id="grid" style="margin-top:10px"></div>
+    <div class="list" id="list"></div>
   </section>
 
   <div class="card-note" id="keyNote" hidden>
-    <b>Хочешь, чтобы я рассказывал сам, по-дружески?</b> Добавь API-ключ Claude в настройках (шестерёнка сверху). Без ключа будет справка из Википедии и кнопка «Спросить Claude», которая откроет приложение Claude с готовым вопросом.
+    <b>Хочешь, чтобы я рассказывал сам, по-дружески?</b> Добавь API-ключ Claude в настройках. Без ключа будет справка из Википедии и кнопка, которая откроет вопрос в приложении Claude.
   </div>
 </main>
 
@@ -179,17 +251,19 @@ a{color:var(--accent)}
     <img class="hero" id="pImg" alt="" hidden>
     <div style="display:grid;gap:8px">
       <h2 id="pTitle"></h2>
+      <p class="hook" id="pHook" hidden></p>
       <div class="meta" id="pMeta"></div>
     </div>
     <div class="story">
       <div class="prose" id="pStory"></div>
+      <div class="story-foot" id="pFoot" hidden><span id="pModel"></span><button class="linkbtn" id="retell" type="button">Рассказать заново</button></div>
       <div id="pQa"></div>
       <form class="ask" id="askForm" hidden autocomplete="off" style="margin-top:14px">
         <input id="askInput" placeholder="Спроси ещё: «а где тут кофе?»" enterkeyhint="send" aria-label="Вопрос">
         <button class="btn btn-ghost" type="submit">Спросить</button>
       </form>
     </div>
-    <div class="row" id="pActions"></div>
+    <div class="row-actions" id="pActions"></div>
   </div>
 </section>
 
@@ -202,16 +276,37 @@ a{color:var(--accent)}
   </div>
   <div class="sheet-body">
     <h2 id="sTitle">Настройки</h2>
+
+    <div class="field">
+      <span class="lbl">Модель</span>
+      <div class="choices" id="modelChoices">
+        <label class="choice"><input type="radio" name="model" value="claude-haiku-4-5-20251001"><div><b>Haiku 4.5 <span class="cost">$</span></b><span>Быстрая и самая экономная. Для прогулок с кучей мест.</span></div></label>
+        <label class="choice"><input type="radio" name="model" value="claude-sonnet-5"><div><b>Sonnet 5 <span class="cost">$$</span></b><span>Живее рассказывает и точнее в фактах. Примерно в 3 раза дороже Haiku.</span></div></label>
+        <label class="choice"><input type="radio" name="model" value="claude-opus-5-5"><div><b>Opus 5.5 <span class="cost">$$$</span></b><span>Самая умная и самая дорогая. Для мест, где хочется глубины.</span></div></label>
+      </div>
+      <p class="msg">Цепляющие факты в списке всегда пишет Haiku, одним запросом на всю пачку мест, и они запоминаются. Выбранная модель пишет только рассказы.</p>
+    </div>
+
+    <div class="field">
+      <span class="lbl">Длина рассказа</span>
+      <div class="seg" role="radiogroup" id="lenSeg">
+        <button type="button" data-len="short" aria-pressed="false">Коротко</button>
+        <button type="button" data-len="normal" aria-pressed="false">Обычно</button>
+        <button type="button" data-len="long" aria-pressed="false">Подробно</button>
+      </div>
+      <p class="msg">Короткий рассказ тратит примерно втрое меньше токенов. Уже рассказанное сохраняется на телефоне и повторно не оплачивается.</p>
+    </div>
+
     <div class="field">
       <label for="apiKey">API-ключ Claude</label>
       <input id="apiKey" type="password" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
-      <p class="msg">Ключ хранится только в этом браузере и уходит напрямую в api.anthropic.com. Взять можно на console.anthropic.com → API Keys. Рассказ стоит примерно цент-два.</p>
+      <p class="msg">Хранится только в этом браузере и уходит напрямую в api.anthropic.com.</p>
     </div>
     <div class="field">
       <label for="radius">Радиус поиска, метров</label>
       <input id="radius" type="number" min="200" max="10000" step="100" inputmode="numeric">
     </div>
-    <div class="row">
+    <div class="actions">
       <button class="btn btn-main" id="saveSettings" type="button">Сохранить</button>
       <button class="btn btn-ghost" id="clearKey" type="button">Удалить ключ</button>
     </div>
@@ -221,20 +316,37 @@ a{color:var(--accent)}
 
 <div class="toast" id="toast" hidden role="status"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 (() => {
   const $ = id => document.getElementById(id);
-  const MODEL = "claude-sonnet-5";
+  const MODELS = {
+    "claude-haiku-4-5-20251001": "Haiku 4.5",
+    "claude-sonnet-5": "Sonnet 5",
+    "claude-opus-5-5": "Opus 5.5"
+  };
+  const LEN = {
+    short:  { words: "90–150 слов", tokens: 450, secs: "3 раздела: самый сочный факт-крючок, главная история места, практичный лайфхак" },
+    normal: { words: "220–350 слов", tokens: 1000, secs: "4–5 разделов: крючок, история с поворотом, что тут сейчас, связи с кино/музыкой/знаменитостями (только реальные, иначе пропусти), лайфхак" },
+    long:   { words: "400–550 слов", tokens: 1600, secs: "5–6 разделов: крючок, история с поворотом, что тут сейчас, связи с кино/музыкой/знаменитостями (только реальные, иначе пропусти), мелочи, которые все пропускают, лайфхак" }
+  };
+  const HOOK_MODEL = "claude-haiku-4-5-20251001";
   const store = {
     get(k, d = null){ try { const v = localStorage.getItem("gid." + k); return v == null ? d : v; } catch { return d; } },
     set(k, v){ try { v == null ? localStorage.removeItem("gid." + k) : localStorage.setItem("gid." + k, v); } catch {} }
   };
+  const key = () => store.get("key", "");
+  const model = () => { const m = store.get("model", "claude-haiku-4-5-20251001"); return MODELS[m] ? m : "claude-haiku-4-5-20251001"; };
+  const len = () => LEN[store.get("len", "normal")] ? store.get("len", "normal") : "normal";
+  const radius = () => Math.min(10000, Math.max(200, Number(store.get("radius", "1000")) || 1000));
+
   const state = {
     pos: null, place: null, items: [], seen: new Set(JSON.parse(store.get("seen", "[]"))),
-    watchId: null, lastFetchPos: null, notified: new Set(), ctl: null, turns: []
+    watchId: null, lastFetchPos: null, notified: new Set(), ctl: null, turns: [],
+    heading: null, sort: "near", current: null, fitted: false,
+    hooks: (() => { try { return JSON.parse(store.get("hooks", "{}")); } catch { return {}; } })(),
+    teasers: {}, enrichRun: 0
   };
-  const key = () => store.get("key", "");
-  const radius = () => Math.min(10000, Math.max(200, Number(store.get("radius", "1000")) || 1000));
 
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const enc = encodeURIComponent;
@@ -256,19 +368,95 @@ a{color:var(--accent)}
     flush(); end(); return out;
   }
 
+  // ---------- geo math ----------
+  const rad = x => x * Math.PI / 180, deg = x => x * 180 / Math.PI;
   function haversine(a, b){
-    const R = 6371000, r = x => x * Math.PI / 180;
-    const dLat = r(b.lat - a.lat), dLon = r(b.lon - a.lon);
-    const h = Math.sin(dLat/2)**2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLon/2)**2;
-    return 2 * R * Math.asin(Math.sqrt(h));
+    const dLat = rad(b.lat - a.lat), dLon = rad(b.lon - a.lon);
+    const h = Math.sin(dLat/2)**2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon/2)**2;
+    return 2 * 6371000 * Math.asin(Math.sqrt(h));
+  }
+  function bearing(a, b){
+    const y = Math.sin(rad(b.lon - a.lon)) * Math.cos(rad(b.lat));
+    const x = Math.cos(rad(a.lat)) * Math.sin(rad(b.lat)) - Math.sin(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.cos(rad(b.lon - a.lon));
+    return (deg(Math.atan2(y, x)) + 360) % 360;
+  }
+  const angDiff = (a, b) => { const d = ((a - b + 540) % 360) - 180; return d; }; // -180..180
+  const COMPASS = ["на север","на северо-восток","на восток","на юго-восток","на юг","на юго-запад","на запад","на северо-запад"];
+  const compassWord = b => COMPASS[Math.round(b / 45) % 8];
+  function relWord(rel){
+    const a = Math.abs(rel);
+    if (a <= 30) return "прямо";
+    if (a >= 150) return "сзади";
+    if (rel > 0) return a < 70 ? "впереди справа" : "справа";
+    return a < 70 ? "впереди слева" : "слева";
   }
   const fmtDist = m => m < 1000 ? Math.round(m / 10) * 10 + " м" : (m / 1000).toFixed(1).replace(".", ",") + " км";
   const walkMin = m => Math.max(1, Math.round(m / 75));
+  function dirText(it){
+    if (state.heading != null) return relWord(angDiff(it.bearing, state.heading));
+    return compassWord(it.bearing).replace("на ", "");
+  }
 
   function say(text, err){
     const m = $("msg");
     if (!text){ m.hidden = true; return; }
     m.hidden = false; m.className = "msg" + (err ? " err" : ""); m.innerHTML = text;
+  }
+
+  // ---------- map ----------
+  let map = null, meMarker = null, accCircle = null, layer = null;
+  const markers = new Map();
+  const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  function ensureMap(pos){
+    if (map || !window.L) return;
+    map = L.map("map", { zoomControl: false, attributionControl: true }).setView([pos.lat, pos.lon], 16);
+    L.tileLayer(`https://{s}.basemaps.cartocdn.com/${dark ? "dark_all" : "rastertiles/voyager"}/{z}/{x}/{y}{r}.png`, {
+      maxZoom: 20, subdomains: "abcd",
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
+    }).addTo(map);
+    layer = L.layerGroup().addTo(map);
+    const meIcon = L.divIcon({ className: "", iconSize: [120, 120], iconAnchor: [60, 60],
+      html: `<div class="me"><svg class="cone" hidden viewBox="0 0 120 120"><defs><radialGradient id="cg" cx="50%" cy="100%" r="100%"><stop offset="0" stop-color="${dark ? "#8497FF" : "#2440E6"}" stop-opacity=".55"/><stop offset="1" stop-color="${dark ? "#8497FF" : "#2440E6"}" stop-opacity="0"/></radialGradient></defs><path d="M60 60 L32 8 A58 58 0 0 1 88 8 Z" fill="url(#cg)"/></svg><div class="dotme"></div></div>` });
+    meMarker = L.marker([pos.lat, pos.lon], { icon: meIcon, interactive: false, zIndexOffset: 1000 }).addTo(map);
+    accCircle = L.circle([pos.lat, pos.lon], { radius: 20, color: dark ? "#8497FF" : "#2440E6", weight: 1, opacity: .4, fillOpacity: .06 }).addTo(map);
+    $("mapEmpty").hidden = true; $("mapBtns").hidden = false;
+  }
+  function moveMe(pos){
+    if (!map) return;
+    meMarker.setLatLng([pos.lat, pos.lon]);
+    accCircle.setLatLng([pos.lat, pos.lon]).setRadius(Math.min(pos.acc || 20, 300));
+  }
+  function drawMarkers(){
+    if (!map) return;
+    layer.clearLayers(); markers.clear();
+    for (const it of state.items){
+      const cls = "mk" + (it.img ? "" : " dot") + (state.seen.has(it.id) ? "" : " new");
+      const style = it.img ? ` style="background-image:url('${esc(it.img).replace(/'/g, "%27")}')"` : "";
+      const size = it.img ? 40 : 40;
+      const icon = L.divIcon({ className: "", iconSize: [size, size], iconAnchor: [size / 2, size / 2], html: `<div class="${cls}" data-id="${esc(it.id)}"${style}></div>` });
+      const m = L.marker([it.lat, it.lon], { icon, title: it.title, zIndexOffset: it.img ? 100 : 0 }).addTo(layer);
+      m.on("click", () => openPlace(it));
+      markers.set(it.id, m);
+    }
+    if (!state.fitted && state.pos){
+      state.fitted = true;
+      const near = state.items.filter(i => i.dist < 700).slice(0, 12);
+      if (near.length >= 3){
+        const b = L.latLngBounds([[state.pos.lat, state.pos.lon], ...near.map(i => [i.lat, i.lon])]);
+        map.fitBounds(b, { padding: [40, 40], maxZoom: 17 });
+      }
+    }
+    highlightFront();
+  }
+  function highlightFront(){
+    if (!map) return;
+    document.querySelectorAll(".mk.front").forEach(e => e.classList.remove("front"));
+    if (state.heading == null) return;
+    for (const it of state.items){
+      if (it.dist < 400 && Math.abs(angDiff(it.bearing, state.heading)) <= 30){
+        document.querySelector(`.mk[data-id="${CSS.escape(it.id)}"]`)?.classList.add("front");
+      }
+    }
   }
 
   // ---------- location ----------
@@ -284,21 +472,20 @@ a{color:var(--accent)}
     if (e && e.code === -1) return "Этот браузер не умеет в геолокацию.";
     return "Не получилось определить, где ты. Попробуй ещё раз.";
   }
-
-  async function locate(){
-    $("locate").disabled = true;
-    $("locateText").textContent = "Ищу тебя…";
+  async function locate(force = true){
+    $("locate").disabled = true; $("locateText").textContent = "Ищу тебя…";
     say(dots + " Ловлю GPS");
     try {
       const p = await getPos();
-      await updatePosition({ lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy }, true);
+      await updatePosition({ lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy }, force);
+      if (map) map.setView([p.coords.latitude, p.coords.longitude], Math.max(map.getZoom(), 16));
     } catch (e){ say(geoErr(e), true); }
-    finally { $("locate").disabled = false; $("locateText").textContent = "Обновить"; }
+    finally { $("locate").disabled = false; $("locateText").textContent = "Найти меня"; }
   }
-
   async function updatePosition(pos, force){
     state.pos = pos;
-    $("coords").textContent = `${pos.lat.toFixed(5)}, ${pos.lon.toFixed(5)}` + (pos.acc ? ` · ±${Math.round(pos.acc)} м` : "");
+    ensureMap(pos); moveMe(pos);
+    $("actions").hidden = false; $("walkRow").hidden = false;
     const moved = state.lastFetchPos ? haversine(state.lastFetchPos, pos) : Infinity;
     if (force || moved > Math.min(250, radius() / 3)){
       state.lastFetchPos = pos;
@@ -306,12 +493,9 @@ a{color:var(--accent)}
       const [place] = await Promise.all([reverse(pos).catch(() => null), loadNearby(pos)]);
       if (place) showPlace(place);
       say("");
-    } else {
-      resort();
-    }
+    } else recalc();
     if ($("walk").checked) checkClose();
   }
-
   async function reverse(pos){
     const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&accept-language=ru&lat=${pos.lat}&lon=${pos.lon}`);
     if (!r.ok) throw 0;
@@ -319,20 +503,20 @@ a{color:var(--accent)}
     const street = [a.road || a.pedestrian || a.square || a.footway, a.house_number].filter(Boolean).join(", ");
     const hood = a.neighbourhood || a.quarter || a.suburb || a.city_district || "";
     const city = a.city || a.town || a.village || a.municipality || a.state || "";
-    return { street, hood, city, country: a.country || "", display: j.display_name || "" };
+    return { street, hood, city, country: a.country || "" };
   }
   function showPlace(pl){
     state.place = pl;
-    $("hereLabel").textContent = [pl.hood, pl.city].filter(Boolean).join(" · ") || "Где ты";
-    $("hereTitle").innerHTML = pl.street ? `Ты на <mark>${esc(pl.street)}</mark>` : `Ты в <mark>${esc(pl.hood || pl.city || "интересном месте")}</mark>`;
-    $("areaStory").hidden = false;
-    document.title = (pl.hood || pl.city || "Болтливый гид") + " · Гид";
+    $("whereBox").hidden = false;
+    $("whereStreet").textContent = pl.street || pl.hood || pl.city || "Ты здесь";
+    $("whereHood").textContent = [pl.hood, pl.city].filter(Boolean).join(" · ");
+    $("sub").textContent = [pl.hood, pl.city].filter(Boolean).join(", ") || "Открывай город вокруг себя";
   }
 
   // ---------- Wikipedia ----------
   async function wikiNearby(lang, pos){
     const u = `https://${lang}.wikipedia.org/w/api.php?action=query&format=json&origin=*&generator=geosearch` +
-      `&ggscoord=${pos.lat}%7C${pos.lon}&ggsradius=${radius()}&ggslimit=40` +
+      `&ggscoord=${pos.lat}%7C${pos.lon}&ggsradius=${radius()}&ggslimit=50` +
       `&prop=coordinates%7Cpageimages%7Cdescription%7Cinfo&inprop=url&piprop=thumbnail&pithumbsize=800&colimit=max`;
     const r = await fetch(u); if (!r.ok) return [];
     const j = await r.json();
@@ -341,77 +525,206 @@ a{color:var(--accent)}
       lat: p.coordinates[0].lat, lon: p.coordinates[0].lon, img: p.thumbnail?.source || "", url: p.fullurl
     }));
   }
-  const BORING = /(станция|метро|station|école|school|школа|лицей|lycée|collège|улица|rue |avenue|boulevard|бульвар|проспект|округ|arrondissement|квартал|район|commune|immeuble|здание суда\b)/i;
-
+  const BORING = /(станция|метро|station|école|school|школа|лицей|lycée|collège|улица|rue |avenue|boulevard|бульвар|проспект|округ|arrondissement|квартал|район|commune|immeuble)/i;
   async function loadNearby(pos){
     const [ru, en] = await Promise.all([wikiNearby("ru", pos).catch(() => []), wikiNearby("en", pos).catch(() => [])]);
-    const seenTitles = new Set();
     const all = [...ru];
-    // English articles fill in what Russian Wikipedia lacks (match by coordinates)
     for (const e of en){
       if (ru.some(r => Math.abs(r.lat - e.lat) < 0.0004 && Math.abs(r.lon - e.lon) < 0.0004)) continue;
       all.push(e);
     }
-    const out = [];
+    const titles = new Set(), out = [];
     for (const it of all){
-      const k = it.title.toLowerCase(); if (seenTitles.has(k)) continue; seenTitles.add(k);
-      it.dist = haversine(pos, it);
-      it.score = it.dist * (it.img ? 1 : 2.2) * (BORING.test(it.title + " " + it.desc) ? 2.5 : 1);
+      const k = it.title.toLowerCase(); if (titles.has(k)) continue; titles.add(k);
+      it.boring = BORING.test(it.title + " " + it.desc);
       out.push(it);
     }
-    out.sort((a, b) => a.score - b.score);
-    state.items = out.slice(0, 40);
-    renderGrid();
+    state.items = out;
+    recalc(true);
+    enrich();
   }
-  function resort(){
+  function recalc(redrawMarkers){
     if (!state.pos) return;
-    for (const it of state.items){ it.dist = haversine(state.pos, it); }
-    renderGrid();
+    for (const it of state.items){
+      it.dist = haversine(state.pos, it);
+      it.bearing = bearing(state.pos, it);
+      it.score = it.dist * (it.img ? 1 : 2.2) * (it.boring ? 2.5 : 1);
+    }
+    state.items.sort((a, b) => a.score - b.score);
+    state.items = state.items.slice(0, 40);
+    renderList();
+    if (redrawMarkers) drawMarkers(); else highlightFront();
   }
 
-  function renderGrid(){
-    const g = $("grid"); g.innerHTML = "";
+  const ARROW = '<svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>';
+  function sortedForView(){
+    const arr = [...state.items];
+    if (state.sort === "front" && state.heading != null){
+      arr.sort((a, b) => {
+        const fa = Math.abs(angDiff(a.bearing, state.heading)), fb = Math.abs(angDiff(b.bearing, state.heading));
+        const pa = fa <= 35 ? 0 : fa <= 70 ? 1 : 2, pb = fb <= 35 ? 0 : fb <= 70 ? 1 : 2;
+        return pa - pb || a.score - b.score;
+      });
+    }
+    return arr;
+  }
+  function renderList(){
+    const box = $("list"); box.innerHTML = "";
     $("listWrap").hidden = false;
+    $("keyNote").hidden = !!key();
     if (!state.items.length){
-      g.innerHTML = `<p class="msg">В радиусе ${fmtDist(radius())} в Википедии ничего не отмечено. Увеличь радиус в настройках или пройдись немного.</p>`;
+      box.innerHTML = `<p class="msg">В радиусе ${fmtDist(radius())} в Википедии ничего не отмечено. Увеличь радиус в настройках или пройдись немного.</p>`;
       $("count").textContent = ""; return;
     }
-    $("count").textContent = `${state.items.length} мест · до ${fmtDist(radius())}`;
-    for (const it of state.items){
+    $("count").textContent = `${state.items.length} мест`;
+    for (const it of sortedForView()){
       const b = document.createElement("button");
-      b.type = "button"; b.className = "card" + (state.seen.has(it.id) ? "" : " new");
-      b.innerHTML = (it.img ? `<img class="ph" loading="lazy" src="${esc(it.img)}" alt="">` : `<div class="noph" aria-hidden="true">${esc(it.title.charAt(0))}</div>`) +
-        `<span class="dist">${fmtDist(it.dist)}</span>` +
-        `<span class="tx"><span class="nm">${esc(it.title)}</span>${it.desc ? `<span class="ds">${esc(it.desc)}</span>` : ""}</span>`;
+      b.type = "button"; b.className = "row"; b.dataset.id = it.id;
+      const rot = state.heading != null ? angDiff(it.bearing, state.heading) : it.bearing;
+      b.innerHTML = (it.img ? `<img class="th" loading="lazy" src="${esc(it.img)}" alt="">` : `<span class="th none" aria-hidden="true">${esc(it.title.charAt(0))}</span>`) +
+        `<span class="tx"><span class="nm">${state.seen.has(it.id) ? "" : '<span class="newdot" title="Ещё не смотрел"></span>'}${esc(it.title)}</span>${hookHtml(it)}</span>` +
+        `<span class="rt"><span style="transform:rotate(${rot}deg);display:inline-flex" class="arr">${ARROW}</span>${fmtDist(it.dist)}<span class="dir">${esc(dirText(it))}</span></span>`;
       b.addEventListener("click", () => openPlace(it));
-      g.appendChild(b);
+      box.appendChild(b);
     }
-    $("keyNote").hidden = !!key();
+  }
+  function hookHtml(it){
+    const h = state.hooks[it.id];
+    if (h) return `<span class="hk">${esc(h)}</span>`;
+    const t = state.teasers[it.id] || it.desc;
+    return t ? `<span class="ds">${esc(t)}</span>` : "";
+  }
+  function refreshHooks(){
+    const byId = new Map(state.items.map(i => [i.id, i]));
+    document.querySelectorAll("#list .row").forEach(r => {
+      const it = byId.get(r.dataset.id); if (!it) return;
+      const tx = r.querySelector(".tx"); const old = tx.querySelector(".hk,.ds");
+      const html = hookHtml(it); if (!html) return;
+      const tmp = document.createElement("span"); tmp.innerHTML = html;
+      old ? old.replaceWith(tmp.firstChild) : tx.appendChild(tmp.firstChild);
+    });
   }
 
-  async function wikiExtract(it){
-    const u = `https://${it.lang}.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=extracts&explaintext=1&exintro=1&redirects=1&titles=${enc(it.title)}`;
+  // Wikipedia teasers for every place + one cheap Claude call for catchy one-liners
+  async function enrich(){
+    const run = ++state.enrichRun;
+    const top = state.items.slice(0, 24);
+    const need = top.filter(i => !state.teasers[i.id]);
+    const byLang = {};
+    for (const i of need) (byLang[i.lang] ||= []).push(i);
+    await Promise.all(Object.entries(byLang).flatMap(([lang, arr]) => {
+      const chunks = []; for (let k = 0; k < arr.length; k += 20) chunks.push(arr.slice(k, k + 20));
+      return chunks.map(async ch => {
+        const ids = ch.map(i => i.id.split(":")[1]).join("%7C");
+        try {
+          const j = await (await fetch(`https://${lang}.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=extracts&exintro=1&explaintext=1&exsentences=3&exlimit=20&pageids=${ids}`)).json();
+          for (const p of Object.values(j.query?.pages || {})){
+            const txt = (p.extract || "").replace(/\s*\([^)]{0,80}\)/g, "").replace(/\s+/g, " ").trim();
+            if (txt) state.teasers[lang + ":" + p.pageid] = txt;
+          }
+        } catch {}
+      });
+    }));
+    if (run !== state.enrichRun) return;
+    // short first-sentence fallback shown until (or instead of) Claude hooks
+    for (const i of top){
+      const t = state.teasers[i.id];
+      if (t && !i._short){ i._full = t; const s = t.match(/^.{20,160}?[.!?](\s|$)/); state.teasers[i.id] = (s ? s[0] : t.slice(0, 140) + "…").trim(); i._short = true; }
+    }
+    refreshHooks();
+    if (!key()) return;
+    const noHook = top.filter(i => !state.hooks[i.id] && (i._full || i.desc)).slice(0, 16);
+    if (noHook.length < 1) return;
+    const lines = noHook.map((i, n) => `${n + 1}. ${i.title}${i.desc ? " — " + i.desc : ""}\n   ${(i._full || "").slice(0, 400)}`).join("\n");
+    const prompt = `Ты пишешь крючки для карточек в приложении-гиде. Для каждого места ниже придумай ОДНУ цепляющую фразу по-русски на «ты», 50–95 символов, в духе вирусного поста: шок-факт, контраст, рекорд, байка или связь с кино/знаменитостью. Начинай сразу с сути, без названия места и без эмодзи. Опирайся только на текст ниже и на то, в чём полностью уверен. Никаких выдумок: если зацепиться не за что, верни пустую строку.\n\n${lines}\n\nОтветь только JSON-массивом строк в том же порядке, ровно ${noHook.length} элементов.`;
     try {
-      const j = await (await fetch(u)).json();
-      const p = Object.values(j.query?.pages || {})[0];
-      return (p?.extract || "").trim();
-    } catch { return ""; }
+      const text = await claudeStream([{ role: "user", content: prompt }], () => {}, undefined, 60 * noHook.length + 100, HOOK_MODEL);
+      if (run !== state.enrichRun) return;
+      const arr = JSON.parse(text.slice(text.indexOf("["), text.lastIndexOf("]") + 1));
+      noHook.forEach((i, n) => { const h = String(arr[n] || "").trim(); if (h) state.hooks[i.id] = h; });
+      const keys = Object.keys(state.hooks); if (keys.length > 400) for (const k of keys.slice(0, keys.length - 400)) delete state.hooks[k];
+      store.set("hooks", JSON.stringify(state.hooks));
+      refreshHooks();
+    } catch {}
+  }
+
+  function updateArrows(){
+    // cheap update of arrows and direction words without rebuilding the list
+    const byId = new Map(state.items.map(i => [i.id, i]));
+    document.querySelectorAll("#list .row").forEach(r => {
+      const it = byId.get(r.dataset.id); if (!it) return;
+      const rot = state.heading != null ? angDiff(it.bearing, state.heading) : it.bearing;
+      r.querySelector(".arr").style.transform = `rotate(${rot}deg)`;
+      r.querySelector(".dir").textContent = dirText(it);
+    });
+  }
+
+  // ---------- compass ----------
+  let compassOn = false, lastRender = 0, lastSort = 0, smooth = null;
+  async function toggleCompass(){
+    if (compassOn){ stopCompass(); return; }
+    try {
+      if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function"){
+        const r = await DeviceOrientationEvent.requestPermission();
+        if (r !== "granted"){ say("Без доступа к датчикам компас не включить. Разреши «Движение и ориентация» для браузера.", true); return; }
+      }
+    } catch { say("Не получилось включить компас.", true); return; }
+    compassOn = true;
+    $("compass").classList.add("on"); $("compass").setAttribute("aria-pressed", "true");
+    window.addEventListener("deviceorientationabsolute", onOrient, true);
+    window.addEventListener("deviceorientation", onOrient, true);
+    $("sortFront").disabled = false;
+    say("Компас включён. Держи телефон горизонтально экраном вверх, и я подсвечу то, что перед тобой.");
+    setTimeout(() => { if (compassOn && state.heading == null) say("Компас не отвечает. На этом устройстве может не быть датчика, или его надо откалибровать восьмёркой.", true); }, 3000);
+  }
+  function stopCompass(){
+    compassOn = false; state.heading = null; smooth = null;
+    window.removeEventListener("deviceorientationabsolute", onOrient, true);
+    window.removeEventListener("deviceorientation", onOrient, true);
+    $("compass").classList.remove("on"); $("compass").setAttribute("aria-pressed", "false");
+    $("headingBadge").hidden = true;
+    const cone = document.querySelector(".me .cone"); if (cone) cone.hidden = true;
+    if (state.sort === "front"){ setSort("near"); }
+    $("sortFront").disabled = true;
+    updateArrows(); highlightFront(); say("");
+  }
+  function onOrient(e){
+    let h = null;
+    if (typeof e.webkitCompassHeading === "number") h = e.webkitCompassHeading;
+    else if (e.absolute && typeof e.alpha === "number") h = 360 - e.alpha;
+    else if (e.type === "deviceorientationabsolute" && typeof e.alpha === "number") h = 360 - e.alpha;
+    if (h == null || isNaN(h)) return;
+    const so = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
+    h = (h + so + 360) % 360;
+    smooth = smooth == null ? h : (smooth + angDiff(h, smooth) * 0.25 + 360) % 360;
+    state.heading = smooth;
+    const now = performance.now();
+    if (now - lastRender < 120) return; lastRender = now;
+    const cone = document.querySelector(".me .cone");
+    if (cone){ cone.hidden = false; cone.style.setProperty("--h", Math.round(smooth) + "deg"); }
+    $("headingBadge").hidden = false;
+    $("headingBadge").textContent = `${Math.round(smooth)}° · смотришь ${compassWord(smooth)}`;
+    updateArrows();
+    if (now - lastSort > 1500){ lastSort = now; highlightFront(); if (state.sort === "front") renderList(); }
+  }
+  function setSort(s){
+    state.sort = s;
+    $("sortNear").setAttribute("aria-pressed", s === "near"); $("sortFront").setAttribute("aria-pressed", s === "front");
+    renderList();
   }
 
   // ---------- Claude ----------
-  const VOICE = `Ты — болтливый местный гид и хороший друг путешественника. Пишешь по-русски, на «ты», легко и с юмором, как в переписке с другом, без канцелярита и пафоса. Любишь неожиданные детали: байки, рекорды, связи с кино, сериалами, песнями, играми, мемами и знаменитостями. Правило номер один: никаких выдуманных фактов, дат и цитат. Если не уверен, пропусти или честно скажи «говорят, что».`;
-  const FMT = `Формат: разделы с заголовками через «## »: «Коротко» (1–2 фразы-крючка), «Из истории», «Сейчас» (чем место живёт сегодня), «Поп-культура» (только реальные связи; если их нет, пропусти раздел), «Лайфхак» (практичный совет: когда прийти, что посмотреть или заказать, откуда лучший вид). В каждом разделе 2–4 предложения или короткий список через «- ». Всего 220–380 слов. Без эмодзи и без вступлений вроде «Конечно!».`;
-
+  const VOICE = `Ты — болтливый местный гид и друг путешественника, который плохо знает этот город. Пишешь по-русски, на «ты», цепляюще и с дофамином, как лучшие вирусные треды: первая фраза бьёт сразу (шок-факт, контраст, неожиданная цифра), дальше короткие абзацы, интрига перед раскрытием, «и вот тут начинается самое интересное», рекорды, скандалы, байки, связи с кино, сериалами, песнями, играми, мемами и знаменитостями. Никакой воды, канцелярита и пафоса. Правило номер один, важнее кликбейта: только правдивые факты, никаких выдуманных дат, цифр и цитат. Если не уверен, пропусти или честно скажи «говорят, что».`;
+  const fmt = () => `Формат: ${LEN[len()].secs}. Каждый раздел начинается с заголовка через «## », и заголовки короткие и интригующие, как у кликбейтных постов (не скучные «Из истории» или «Сейчас»). Самое неожиданное — в начале. Всего ${LEN[len()].words}. Без эмодзи и без вступлений вроде «Конечно!».`;
   function wherePhrase(){
     const pl = state.place; if (!pl) return state.pos ? `координаты ${state.pos.lat.toFixed(5)}, ${state.pos.lon.toFixed(5)}` : "";
     return [pl.street, pl.hood, pl.city, pl.country].filter(Boolean).join(", ");
   }
-
-  async function claudeStream(messages, onText, signal, maxTokens = 1400){
+  async function claudeStream(messages, onText, signal, maxTokens, modelOverride){
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST", signal,
       headers: { "content-type": "application/json", "x-api-key": key(), "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
-      body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, stream: true, messages })
+      body: JSON.stringify({ model: modelOverride || model(), max_tokens: maxTokens || LEN[len()].tokens, stream: true, messages })
     });
     if (!r.ok){
       let t = ""; try { t = (await r.json()).error?.message || ""; } catch {}
@@ -426,11 +739,9 @@ a{color:var(--accent)}
       while ((i = buf.indexOf("\n")) >= 0){
         const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
         if (!line.startsWith("data:")) continue;
-        try {
-          const ev = JSON.parse(line.slice(5));
-          if (ev.type === "content_block_delta" && ev.delta?.type === "text_delta"){ text += ev.delta.text; onText(text); }
-          if (ev.type === "error") throw new Error(ev.error?.message || "stream error");
-        } catch (e){ if (e.message && !/JSON/.test(e.message)) throw e; }
+        let ev; try { ev = JSON.parse(line.slice(5)); } catch { continue; }
+        if (ev.type === "content_block_delta" && ev.delta?.type === "text_delta"){ text += ev.delta.text; onText(text); }
+        if (ev.type === "error") throw new Error(ev.error?.message || "stream error");
       }
     }
     return text;
@@ -438,68 +749,134 @@ a{color:var(--accent)}
   function apiErr(e){
     if (e.name === "AbortError") return "";
     if (e.status === 401) return "Ключ не подошёл. Проверь его в настройках.";
+    if (e.status === 404) return "Эта модель недоступна для твоего ключа. Выбери другую в настройках.";
     if (e.status === 429) return "Слишком много запросов. Подожди минутку.";
     if (e.status === 529 || e.status >= 500) return "Claude сейчас перегружен. Попробуй через минуту.";
     if (e.status === 400 && /credit|balance/i.test(e.message)) return "На аккаунте API закончились деньги. Пополни баланс в console.anthropic.com.";
     return "Не получилось связаться с Claude: " + esc(e.message || "ошибка сети");
   }
+  const claudeAppLink = p => "https://claude.ai/new?q=" + enc(p);
 
-  function claudeAppLink(prompt){
-    return "https://claude.ai/new?q=" + enc(prompt);
+  // story cache: saves tokens on repeat opens
+  const cacheKey = id => `story.${model()}.${len()}.${id}`;
+  function cacheGet(id){ return store.get(cacheKey(id)); }
+  function cachePut(id, text){
+    store.set(cacheKey(id), text);
+    try {
+      const idx = JSON.parse(store.get("storyIdx", "[]")); idx.push(cacheKey(id));
+      while (idx.length > 150) store.set(idx.shift(), null);
+      store.set("storyIdx", JSON.stringify(idx));
+    } catch {}
   }
 
-  // ---------- place sheet ----------
+  // ---------- sheets ----------
   function openSheet(id){ $(id).hidden = false; document.body.style.overflow = "hidden"; history.pushState({ sheet: id }, ""); }
   function closeSheets(){ state.ctl?.abort(); $("sheet").hidden = true; $("settings").hidden = true; document.body.style.overflow = ""; }
   window.addEventListener("popstate", closeSheets);
   const back = () => { if (history.state?.sheet) history.back(); else closeSheets(); };
 
-  async function openPlace(it){
-    state.seen.add(it.id); store.set("seen", JSON.stringify([...state.seen].slice(-500)));
-    state.ctl?.abort(); state.ctl = new AbortController();
-    state.turns = [];
-    const img = $("pImg");
-    if (it.img){ img.src = it.img.replace(/\/\d+px-/, "/1200px-"); img.onerror = () => { img.onerror = null; img.src = it.img; }; img.alt = it.title; img.hidden = false; }
-    else { img.hidden = true; img.removeAttribute("src"); }
-    $("pTitle").textContent = it.title;
-    $("pMeta").innerHTML = `<span class="m">${fmtDist(it.dist)} · ~${walkMin(it.dist)} мин пешком</span>` + (it.desc ? `<span>${esc(it.desc)}</span>` : "");
-    $("pQa").innerHTML = ""; $("askForm").hidden = true;
-    const pr = $("pStory"); pr.innerHTML = `<p class="wiki">${dots} Листаю Википедию</p>`;
-    const nav = `https://www.google.com/maps/dir/?api=1&travelmode=walking&destination=${it.lat},${it.lon}`;
-    const photos = `https://www.google.com/search?tbm=isch&q=${enc(it.title)}`;
-    openSheet("sheet");
+  function prepSheet({ title, img, meta }){
+    state.ctl?.abort(); state.ctl = new AbortController(); state.turns = [];
+    const im = $("pImg");
+    if (img){ im.src = img; im.hidden = false; } else { im.hidden = true; im.removeAttribute("src"); }
+    $("pTitle").textContent = title; $("pMeta").innerHTML = meta || ""; $("pHook").hidden = true;
+    $("pQa").innerHTML = ""; $("askForm").hidden = true; $("pFoot").hidden = true; $("pActions").innerHTML = "";
+    if ($("sheet").hidden) openSheet("sheet");
     $("sheet").scrollTop = 0;
-
-    const extract = await wikiExtract(it);
-    const prompt = `${VOICE}\n\nЯ стою примерно в ${fmtDist(it.dist)} от места «${it.title}»${it.desc ? " (" + it.desc + ")" : ""}. Я сейчас: ${wherePhrase()}.\nВот вступление статьи из Википедии как опора (можешь добавить и то, что знаешь сам, если уверен):\n"""${extract.slice(0, 3000)}"""\n\nРасскажи мне про это место. ${FMT}`;
-
-    const actions = $("pActions");
-    actions.innerHTML =
-      `<a class="btn btn-main" href="${nav}" target="_blank" rel="noopener">Маршрут</a>` +
-      `<a class="btn btn-ghost" href="${photos}" target="_blank" rel="noopener">Ещё фото</a>` +
-      `<a class="btn btn-ghost" href="${esc(it.url)}" target="_blank" rel="noopener">Википедия</a>`;
-
-    if (key()){
-      pr.innerHTML = `<p class="wiki">${dots} Вспоминаю всё самое интересное</p>`;
-      state.turns = [{ role: "user", content: prompt }];
-      try {
-        const text = await claudeStream(state.turns, t => { pr.innerHTML = md(t); pr.classList.add("caret"); }, state.ctl.signal);
-        pr.classList.remove("caret");
-        state.turns.push({ role: "assistant", content: text });
-        $("askForm").hidden = false;
-      } catch (e){
-        pr.classList.remove("caret");
-        const m = apiErr(e); if (!m) return;
-        pr.innerHTML = (extract ? `<p>${esc(extract.slice(0, 900))}</p>` : "") + `<p class="wiki" style="color:var(--warn)">${m}</p>`;
-      }
-    } else {
-      pr.innerHTML = (extract ? md(extract.split("\n").slice(0, 4).join("\n\n")) : `<p class="wiki">В Википедии про это место почти ничего нет.</p>`);
-      const a = document.createElement("a");
-      a.className = "btn btn-hi"; a.target = "_blank"; a.rel = "noopener";
-      a.href = claudeAppLink(`${VOICE}\n\nЯ стою рядом с местом «${it.title}» (${wherePhrase()}). Расскажи мне про него. ${FMT}`);
-      a.textContent = "Рассказать по-дружески в Claude";
-      actions.prepend(a);
+    return state.ctl.signal;
+  }
+  async function runStory({ id, prompt, fallbackHtml, appPrompt, maxTokens, force }){
+    const pr = $("pStory");
+    if (!key()){
+      pr.innerHTML = fallbackHtml || `<p class="wiki">Расскажет Claude: добавь ключ в настройках или открой вопрос в приложении Claude.</p>`;
+      const a = document.createElement("a"); a.className = "btn btn-hi"; a.target = "_blank"; a.rel = "noopener";
+      a.href = claudeAppLink(appPrompt || prompt); a.textContent = "Рассказать по-дружески в Claude";
+      $("pActions").prepend(a); return;
     }
+    const cached = id && !force ? cacheGet(id) : null;
+    const finish = text => {
+      pr.classList.remove("caret");
+      state.turns = [{ role: "user", content: prompt }, { role: "assistant", content: text }];
+      $("askForm").hidden = false; $("pFoot").hidden = false;
+      $("pModel").textContent = MODELS[model()] + (cached ? " · из памяти" : "");
+      $("retell").onclick = () => { $("pQa").innerHTML = ""; runStory({ id, prompt, fallbackHtml, appPrompt, maxTokens, force: true }); };
+    };
+    if (cached){ pr.innerHTML = md(cached); finish(cached); return; }
+    state.ctl?.abort(); state.ctl = new AbortController();
+    pr.innerHTML = `<p class="wiki">${dots} Вспоминаю всё самое интересное</p>`;
+    $("pFoot").hidden = true; $("askForm").hidden = true;
+    try {
+      const text = await claudeStream([{ role: "user", content: prompt }], t => { pr.innerHTML = md(t); pr.classList.add("caret"); }, state.ctl.signal, maxTokens);
+      if (id) cachePut(id, text);
+      finish(text);
+    } catch (e){
+      pr.classList.remove("caret");
+      const m = apiErr(e); if (!m) return;
+      pr.innerHTML = (fallbackHtml || "") + `<p class="wiki" style="color:var(--warn)">${m}</p>`;
+    }
+  }
+
+  async function wikiExtract(it){
+    const u = `https://${it.lang}.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=extracts&explaintext=1&exintro=1&redirects=1&titles=${enc(it.title)}`;
+    try { const j = await (await fetch(u)).json(); return (Object.values(j.query?.pages || {})[0]?.extract || "").trim(); } catch { return ""; }
+  }
+
+  async function openPlace(it){
+    state.current = it;
+    if (!state.seen.has(it.id)){
+      state.seen.add(it.id); store.set("seen", JSON.stringify([...state.seen].slice(-500)));
+      document.querySelector(`.mk[data-id="${CSS.escape(it.id)}"]`)?.classList.remove("new");
+      document.querySelector(`#list .row[data-id="${CSS.escape(it.id)}"] .newdot`)?.remove();
+    }
+    const dir = state.heading != null ? relWord(angDiff(it.bearing, state.heading)) : compassWord(it.bearing);
+    prepSheet({
+      title: it.title,
+      img: it.img ? it.img.replace(/\/\d+px-/, "/1200px-") : "",
+      meta: `<span class="m">${fmtDist(it.dist)} · ~${walkMin(it.dist)} мин · ${esc(dir)}</span>` + (it.desc ? `<span>${esc(it.desc)}</span>` : "")
+    });
+    const im = $("pImg"); if (it.img) im.onerror = () => { im.onerror = null; im.src = it.img; };
+    if (state.hooks[it.id]){ $("pHook").textContent = state.hooks[it.id]; $("pHook").hidden = false; }
+    $("pStory").innerHTML = `<p class="wiki">${dots} Листаю Википедию</p>`;
+    const nav = `https://www.google.com/maps/dir/?api=1&travelmode=walking&destination=${it.lat},${it.lon}`;
+    const signal = state.ctl.signal;
+    const extract = await wikiExtract(it);
+    if (signal.aborted) return;
+    $("pActions").innerHTML =
+      `<a class="btn btn-main" href="${nav}" target="_blank" rel="noopener">Маршрут</a>` +
+      `<a class="btn btn-ghost" href="https://www.google.com/search?tbm=isch&q=${enc(it.title)}" target="_blank" rel="noopener">Ещё фото</a>` +
+      `<a class="btn btn-ghost" href="${esc(it.url)}" target="_blank" rel="noopener">Википедия</a>`;
+    const where = `Я стою в ${fmtDist(it.dist)} от этого места, оно от меня ${dir}. Я сейчас: ${wherePhrase()}.`;
+    const prompt = `${VOICE}\n\nМесто: «${it.title}»${it.desc ? " (" + it.desc + ")" : ""}. ${where}\nВступление статьи из Википедии как опора (добавляй и то, что знаешь сам, если уверен):\n"""${extract.slice(0, 2500)}"""\n\nРасскажи мне про это место. ${fmt()}`;
+    runStory({
+      id: it.id, prompt,
+      fallbackHtml: extract ? md(extract.split("\n").slice(0, 4).join("\n\n")) : `<p class="wiki">В Википедии про это место почти ничего нет.</p>`,
+      appPrompt: `${VOICE}\n\nЯ стою рядом с местом «${it.title}» (${wherePhrase()}). Расскажи мне про него. ${fmt()}`
+    });
+  }
+
+  function lookAround(){
+    if (!state.pos) return;
+    const hasH = state.heading != null;
+    const pool = state.items.filter(i => i.dist < 600).slice(0, 14);
+    const lines = pool.map(i => `- ${i.title}${i.desc ? " (" + i.desc + ")" : ""}: ${fmtDist(i.dist)}, ${hasH ? relWord(angDiff(i.bearing, state.heading)) : compassWord(i.bearing)}`).join("\n");
+    const orient = hasH ? `Я смотрю ${compassWord(state.heading)} (${Math.round(state.heading)}°). Направления ниже даны относительно того, куда я смотрю.` : `Компас выключен, поэтому направления ниже по сторонам света.`;
+    const prompt = `${VOICE}\n\nЯ только что пришёл сюда и вообще не знаю этот город: ${wherePhrase()}. ${orient}\nЧто есть рядом по Википедии:\n${lines || "(в Википедии рядом почти ничего)"}\n\nПомоги мне оглядеться, как будто стоишь рядом. ${hasH ? "Начни с того, что прямо передо мной, потом справа и слева, потом сзади." : "Пройдись по сторонам света."} Говори, на что смотреть глазами (здания, шпили, вывески, деревья), что это и почему интересно. В конце раздел «## Куда пойти первым» с одним-двумя советами, куда шагнуть прямо сейчас и сколько идти. Разделы через «## ». ${len() === "short" ? "120–180" : len() === "long" ? "350–500" : "200–320"} слов, без эмодзи.`;
+    prepSheet({
+      title: hasH ? `Смотришь ${compassWord(state.heading)}` : "Что вокруг тебя",
+      img: pool.find(i => i.img && (!hasH || Math.abs(angDiff(i.bearing, state.heading)) <= 45))?.img?.replace(/\/\d+px-/, "/1200px-") || pool.find(i => i.img)?.img || "",
+      meta: `<span>${esc(wherePhrase())}</span>`
+    });
+    runStory({ id: null, prompt, maxTokens: LEN[len()].tokens + 200 });
+  }
+
+  function areaStory(){
+    if (!state.pos) return;
+    const names = state.items.slice(0, 15).map(i => i.title).join("; ");
+    const prompt = `${VOICE}\n\nЯ сейчас здесь: ${wherePhrase()} (${state.pos.lat.toFixed(5)}, ${state.pos.lon.toFixed(5)}). Рядом отмечены: ${names}.\nРасскажи мне про этот район: какой у него характер, что тут было раньше, кто тут жил из знаменитостей, где снимали кино, что тут едят и куда пройтись минут на 30–60. Разделы через «## »: «Где ты», «Из истории», «Знаменитости и кино», «Сейчас», «Маршрут на час». ${LEN[len()].words.replace(/\d+/g, n => String(Math.round(n * 1.2)))}, без эмодзи.`;
+    const title = state.place?.hood || state.place?.city || "Этот район";
+    prepSheet({ title, img: state.items.find(i => i.img)?.img?.replace(/\/\d+px-/, "/1200px-") || "", meta: `<span>${esc(wherePhrase())}</span>` });
+    $("pActions").innerHTML = `<a class="btn btn-ghost" href="https://www.openstreetmap.org/?mlat=${state.pos.lat}&mlon=${state.pos.lon}#map=16/${state.pos.lat}/${state.pos.lon}" target="_blank" rel="noopener">Карта</a>`;
+    runStory({ id: "area:" + title, prompt, maxTokens: LEN[len()].tokens + 400 });
   }
 
   async function ask(q){
@@ -508,41 +885,13 @@ a{color:var(--accent)}
     wrap.innerHTML = `<p class="q">${esc(q)}</p><div class="prose"><p class="wiki">${dots}</p></div>`;
     $("pQa").appendChild(wrap);
     const out = wrap.lastElementChild;
-    const msgs = [...state.turns, { role: "user", content: q + "\n\n(Отвечай в том же стиле, коротко: 60–180 слов. Не выдумывай факты.)" }];
+    const msgs = [...state.turns, { role: "user", content: q + "\n\n(Отвечай в том же стиле, коротко: 50–150 слов. Не выдумывай факты.)" }];
     state.ctl?.abort(); state.ctl = new AbortController();
     try {
-      const t = await claudeStream(msgs.length > 9 ? [msgs[0], ...msgs.slice(-8)] : msgs, x => { out.innerHTML = md(x); out.classList.add("caret"); }, state.ctl.signal, 700);
+      const t = await claudeStream(msgs.length > 9 ? [msgs[0], ...msgs.slice(-8)] : msgs, x => { out.innerHTML = md(x); out.classList.add("caret"); }, state.ctl.signal, 600);
       state.turns.push({ role: "user", content: q }, { role: "assistant", content: t });
     } catch (e){ const m = apiErr(e); if (m) out.innerHTML = `<p class="wiki" style="color:var(--warn)">${m}</p>`; }
     out.classList.remove("caret");
-  }
-
-  async function areaStory(){
-    if (!state.pos) return;
-    const names = state.items.slice(0, 15).map(i => i.title).join("; ");
-    const prompt = `${VOICE}\n\nЯ сейчас здесь: ${wherePhrase()} (${state.pos.lat.toFixed(5)}, ${state.pos.lon.toFixed(5)}). Рядом отмечены: ${names}.\nРасскажи мне про этот район: какой у него характер, что тут было раньше, кто тут жил из знаменитостей, где снимали кино, что тут едят и куда пройтись минут на 30–60. Разделы через «## »: «Где ты», «Из истории», «Знаменитости и кино», «Сейчас», «Маршрут на час». 250–400 слов, без эмодзи.`;
-    const it = { id: "area", title: state.place?.hood || state.place?.city || "Этот район", desc: state.place?.city || "", dist: 0, lat: state.pos.lat, lon: state.pos.lon, img: state.items.find(i => i.img)?.img || "", url: `https://www.openstreetmap.org/?mlat=${state.pos.lat}&mlon=${state.pos.lon}#map=16/${state.pos.lat}/${state.pos.lon}` };
-    state.ctl?.abort(); state.ctl = new AbortController();
-    const img = $("pImg"); if (it.img){ img.src = it.img; img.hidden = false; } else img.hidden = true;
-    $("pTitle").textContent = it.title;
-    $("pMeta").innerHTML = `<span>${esc(wherePhrase())}</span>`;
-    $("pQa").innerHTML = ""; $("askForm").hidden = true;
-    $("pActions").innerHTML = `<a class="btn btn-ghost" href="${esc(it.url)}" target="_blank" rel="noopener">Карта</a>`;
-    const pr = $("pStory");
-    openSheet("sheet"); $("sheet").scrollTop = 0;
-    if (!key()){
-      pr.innerHTML = `<p class="wiki">Про район расскажет Claude. Добавь ключ в настройках или открой вопрос в приложении Claude.</p>`;
-      const a = document.createElement("a"); a.className = "btn btn-hi"; a.target = "_blank"; a.rel = "noopener";
-      a.href = claudeAppLink(prompt); a.textContent = "Спросить в Claude"; $("pActions").prepend(a);
-      return;
-    }
-    pr.innerHTML = `<p class="wiki">${dots} Осматриваю район</p>`;
-    state.turns = [{ role: "user", content: prompt }];
-    try {
-      const t = await claudeStream(state.turns, x => { pr.innerHTML = md(x); pr.classList.add("caret"); }, state.ctl.signal, 1600);
-      state.turns.push({ role: "assistant", content: t }); $("askForm").hidden = false;
-    } catch (e){ const m = apiErr(e); if (m) pr.innerHTML = `<p class="wiki" style="color:var(--warn)">${m}</p>`; }
-    pr.classList.remove("caret");
   }
 
   // ---------- photo ----------
@@ -550,28 +899,23 @@ a{color:var(--accent)}
     return new Promise((res, rej) => {
       const url = URL.createObjectURL(file); const im = new Image();
       im.onload = () => {
-        const s = Math.min(1, 1400 / Math.max(im.width, im.height));
+        const s = Math.min(1, 1280 / Math.max(im.width, im.height));
         const c = document.createElement("canvas"); c.width = Math.round(im.width * s); c.height = Math.round(im.height * s);
         c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
-        res({ url, data: c.toDataURL("image/jpeg", 0.85).split(",")[1] });
+        res({ url, data: c.toDataURL("image/jpeg", 0.82).split(",")[1] });
       };
       im.onerror = rej; im.src = url;
     });
   }
   async function photoStory(file){
     if (!file) return;
-    const img = $("pImg");
     let jp; try { jp = await toJpeg(file); } catch { say("Не получилось открыть фото.", true); return; }
-    img.src = jp.url; img.alt = "Твоё фото"; img.hidden = false;
-    $("pTitle").textContent = "Что у тебя на фото";
-    $("pMeta").innerHTML = state.place ? `<span>${esc(wherePhrase())}</span>` : "";
-    $("pQa").innerHTML = ""; $("askForm").hidden = true; $("pActions").innerHTML = "";
+    prepSheet({ title: "Что у тебя на фото", img: jp.url, meta: state.place ? `<span>${esc(wherePhrase())}</span>` : "" });
     const pr = $("pStory");
-    openSheet("sheet"); $("sheet").scrollTop = 0;
-    if (!key()){ pr.innerHTML = `<p class="wiki">Чтобы я узнавал места по фото, добавь API-ключ Claude в настройках. Или отправь это фото в приложение Claude.</p>`; return; }
-    const near = state.items.slice(0, 12).map(i => `${i.title} (${fmtDist(i.dist)})`).join("; ");
-    const text = `${VOICE}\n\nНа фото то, что я вижу прямо сейчас. Я тут: ${wherePhrase() || "неизвестно"}.${near ? " Рядом по Википедии: " + near + "." : ""}\nПервой строкой напиши «# » и название того, что на фото. Если уверенно узнать не можешь, честно скажи и расскажи, что видно: стиль, эпоха, что это скорее всего.\nДальше: ${FMT}`;
-    state.ctl?.abort(); state.ctl = new AbortController();
+    if (!key()){ pr.innerHTML = `<p class="wiki">Чтобы я узнавал места по фото, добавь API-ключ Claude в настройках. Или отправь это фото в приложение Claude.</p>`; $("cam").value = ""; return; }
+    const hasH = state.heading != null;
+    const near = state.items.slice(0, 14).map(i => `${i.title} (${fmtDist(i.dist)}, ${hasH ? relWord(angDiff(i.bearing, state.heading)) : compassWord(i.bearing)})`).join("; ");
+    const text = `${VOICE}\n\nНа фото то, что я вижу прямо сейчас. Я тут: ${wherePhrase() || "неизвестно"}.${hasH ? ` Камера смотрит ${compassWord(state.heading)}.` : ""}${near ? " Рядом по Википедии: " + near + "." : ""}\nПервой строкой напиши «# » и название того, что на фото. Если уверенно узнать не можешь, честно скажи и расскажи, что видно: стиль, эпоха, что это скорее всего.\nДальше: ${fmt()}`;
     pr.innerHTML = `<p class="wiki">${dots} Разглядываю</p>`;
     const show = t => {
       const m = t.match(/^\s*#\s+(.+)\n?/);
@@ -583,7 +927,8 @@ a{color:var(--accent)}
       const t = await claudeStream(msgs, x => { show(x); pr.classList.add("caret"); }, state.ctl.signal);
       show(t);
       state.turns = [{ role: "user", content: text + "\n\n(К этому сообщению было приложено фото.)" }, { role: "assistant", content: t }];
-      $("askForm").hidden = false;
+      $("askForm").hidden = false; $("pFoot").hidden = false; $("pModel").textContent = MODELS[model()];
+      $("retell").onclick = () => photoStory(file);
       $("pActions").innerHTML = `<a class="btn btn-ghost" target="_blank" rel="noopener" href="https://www.google.com/search?tbm=isch&q=${enc($("pTitle").textContent)}">Ещё фото</a>`;
     } catch (e){ const m = apiErr(e); if (m) pr.innerHTML = `<p class="wiki" style="color:var(--warn)">${m}</p>`; }
     pr.classList.remove("caret");
@@ -595,7 +940,7 @@ a{color:var(--accent)}
   async function startWalk(){
     if (!navigator.geolocation){ $("walk").checked = false; say(geoErr({ code: -1 }), true); return; }
     try { wakeLock = await navigator.wakeLock?.request("screen"); } catch {}
-    say("Гуляем. Держи вкладку открытой, я подскажу, когда подойдёшь к чему-то интересному.");
+    say("Гуляем. Держи приложение открытым, и я дам знать, когда подойдёшь к чему-то интересному.");
     state.watchId = navigator.geolocation.watchPosition(
       p => updatePosition({ lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy }, false).catch(() => {}),
       e => say(geoErr(e), true),
@@ -611,7 +956,7 @@ a{color:var(--accent)}
     if (!hit) return;
     state.notified.add(hit.id);
     const t = $("toast");
-    t.innerHTML = `<img src="${esc(hit.img)}" alt=""><div><b>${esc(hit.title)}</b><span>${fmtDist(hit.dist)} от тебя. Нажми, расскажу</span></div>`;
+    t.innerHTML = `<img src="${esc(hit.img)}" alt=""><div><b>${esc(hit.title)}</b><span>${fmtDist(hit.dist)}, ${esc(dirText(hit))}. Нажми, расскажу</span></div>`;
     t.hidden = false; t.onclick = () => { t.hidden = true; openPlace(hit); };
     try { navigator.vibrate?.([80, 60, 80]); } catch {}
     clearTimeout(checkClose.tm); checkClose.tm = setTimeout(() => { t.hidden = true; }, 12000);
@@ -622,23 +967,37 @@ a{color:var(--accent)}
 
   // ---------- settings ----------
   function openSettings(){
-    $("apiKey").value = key(); $("radius").value = radius(); $("sMsg").hidden = true; openSheet("settings");
+    $("apiKey").value = key(); $("radius").value = radius(); $("sMsg").hidden = true;
+    document.querySelectorAll('input[name="model"]').forEach(r => { r.checked = r.value === model(); });
+    document.querySelectorAll("#lenSeg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.len === len()));
+    openSheet("settings");
   }
+  $("lenSeg").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    document.querySelectorAll("#lenSeg button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  });
   $("saveSettings").addEventListener("click", () => {
     const k = $("apiKey").value.trim();
     if (k && !/^sk-ant-/.test(k)){ $("sMsg").hidden = false; $("sMsg").className = "msg err"; $("sMsg").textContent = "Ключ Claude начинается с sk-ant-. Проверь, всё ли скопировалось."; return; }
     store.set("key", k || null);
+    const m = document.querySelector('input[name="model"]:checked'); if (m) store.set("model", m.value);
+    const l = document.querySelector('#lenSeg button[aria-pressed="true"]'); if (l) store.set("len", l.dataset.len);
     const oldR = radius(); store.set("radius", String($("radius").value || 1000));
     $("sMsg").hidden = false; $("sMsg").className = "msg"; $("sMsg").textContent = "Сохранено.";
     $("keyNote").hidden = !!k || !state.items.length;
-    if (state.pos && radius() !== oldR) loadNearby(state.pos);
-    setTimeout(back, 500);
+    if (state.pos && radius() !== oldR){ state.fitted = false; loadNearby(state.pos); }
+    setTimeout(back, 400);
   });
   $("clearKey").addEventListener("click", () => { store.set("key", null); $("apiKey").value = ""; $("sMsg").hidden = false; $("sMsg").className = "msg"; $("sMsg").textContent = "Ключ удалён."; });
 
   // ---------- wiring ----------
-  $("locate").addEventListener("click", locate);
+  $("locate").addEventListener("click", () => locate(true));
+  $("recenter").addEventListener("click", () => locate(true));
+  $("compass").addEventListener("click", toggleCompass);
+  $("lookAround").addEventListener("click", lookAround);
   $("areaStory").addEventListener("click", areaStory);
+  $("sortNear").addEventListener("click", () => setSort("near"));
+  $("sortFront").addEventListener("click", () => { if (state.heading == null){ toggleCompass(); return; } setSort("front"); });
   $("walk").addEventListener("change", e => e.target.checked ? startWalk() : stopWalk());
   $("closeSheet").addEventListener("click", back);
   $("closeSettings").addEventListener("click", back);
@@ -647,8 +1006,8 @@ a{color:var(--accent)}
   $("askForm").addEventListener("submit", e => { e.preventDefault(); const v = $("askInput").value.trim(); if (!v) return; $("askInput").value = ""; ask(v); });
 
   if (!window.isSecureContext) say("Геолокация работает только по https. Открой приложение по ссылке с https://", true);
-  // auto-start if permission already granted
-  navigator.permissions?.query({ name: "geolocation" }).then(p => { if (p.state === "granted") locate(); }).catch(() => {});
+  if (!window.L) say("Карта не загрузилась. Проверь интернет и обнови страницу.", true);
+  navigator.permissions?.query({ name: "geolocation" }).then(p => { if (p.state === "granted") locate(true); }).catch(() => {});
 })();
 </script>
 </body>
