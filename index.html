@@ -129,8 +129,11 @@ a{color:var(--accent)}
 
 /* sheet */
 .sheet{position:fixed;inset:0;z-index:2000;background:var(--bg);overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
-.sheet-bar{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:calc(var(--safe-t) + 10px) 16px 10px;background:linear-gradient(var(--bg) 70%,transparent)}
-.sheet-body{max-width:760px;margin:0 auto;padding:0 16px calc(var(--safe-b) + 40px);display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+.sheet-bottom{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;gap:8px;padding:18px 16px calc(var(--safe-b) + 12px);background:linear-gradient(transparent,var(--bg) 40%)}
+.sheet-bottom .btn{flex:1;padding:15px 16px;font-size:16px;box-shadow:var(--shadow)}
+.btn-back{background:var(--ink);color:var(--bg)}
+.btn-speak[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.sheet-body{max-width:760px;margin:0 auto;padding:calc(var(--safe-t) + 14px) 16px calc(var(--safe-b) + 110px);display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
 .hero{width:100%;max-width:100%;max-height:52vh;object-fit:cover;border-radius:20px;display:block;background:var(--surface-2)}
 .sheet h2{font-family:var(--display);font-weight:700;font-size:clamp(24px,6.5vw,32px);line-height:1.1;margin:0;letter-spacing:-.02em;text-wrap:balance}
 .meta{display:flex;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
@@ -242,11 +245,6 @@ a{color:var(--accent)}
 
 <!-- place sheet -->
 <section class="sheet" id="sheet" hidden aria-modal="true" role="dialog" aria-labelledby="pTitle">
-  <div class="sheet-bar">
-    <button class="icon-btn" id="closeSheet" type="button" aria-label="Назад">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-    </button>
-  </div>
   <div class="sheet-body">
     <img class="hero" id="pImg" alt="" hidden>
     <div style="display:grid;gap:8px">
@@ -265,15 +263,17 @@ a{color:var(--accent)}
     </div>
     <div class="row-actions" id="pActions"></div>
   </div>
+  <div class="sheet-bottom">
+    <button class="btn btn-back" id="closeSheet" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg> Назад</button>
+    <button class="btn btn-ghost btn-speak" id="speak" type="button" aria-pressed="false" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>
+      <span>Вслух</span>
+    </button>
+  </div>
 </section>
 
 <!-- settings -->
 <section class="sheet" id="settings" hidden aria-modal="true" role="dialog" aria-labelledby="sTitle">
-  <div class="sheet-bar">
-    <button class="icon-btn" id="closeSettings" type="button" aria-label="Назад">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-    </button>
-  </div>
   <div class="sheet-body">
     <h2 id="sTitle">Настройки</h2>
 
@@ -306,11 +306,12 @@ a{color:var(--accent)}
       <label for="radius">Радиус поиска, метров</label>
       <input id="radius" type="number" min="200" max="10000" step="100" inputmode="numeric">
     </div>
-    <div class="actions">
-      <button class="btn btn-main" id="saveSettings" type="button">Сохранить</button>
-      <button class="btn btn-ghost" id="clearKey" type="button">Удалить ключ</button>
-    </div>
+    <button class="btn btn-ghost" id="clearKey" type="button" style="justify-self:start">Удалить ключ</button>
     <p class="msg" id="sMsg" hidden></p>
+  </div>
+  <div class="sheet-bottom">
+    <button class="btn btn-back" id="closeSettings" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg> Назад</button>
+    <button class="btn btn-main" id="saveSettings" type="button">Сохранить</button>
   </div>
 </section>
 
@@ -326,9 +327,9 @@ a{color:var(--accent)}
     "claude-opus-5-5": "Opus 5.5"
   };
   const LEN = {
-    short:  { words: "90–150 слов", tokens: 450, secs: "3 раздела: самый сочный факт-крючок, главная история места, практичный лайфхак" },
-    normal: { words: "220–350 слов", tokens: 1000, secs: "4–5 разделов: крючок, история с поворотом, что тут сейчас, связи с кино/музыкой/знаменитостями (только реальные, иначе пропусти), лайфхак" },
-    long:   { words: "400–550 слов", tokens: 1600, secs: "5–6 разделов: крючок, история с поворотом, что тут сейчас, связи с кино/музыкой/знаменитостями (только реальные, иначе пропусти), мелочи, которые все пропускают, лайфхак" }
+    short:  { words: "100–160 слов", tokens: 500, secs: "удар-крючок, одна главная история с поворотом, в конце совет, что сделать прямо сейчас" },
+    normal: { words: "220–350 слов", tokens: 1000, secs: "удар-крючок, история с поворотом, что тут творится сейчас, связь с кино, музыкой или звёздами (только реальная, иначе пропусти), в конце совет, что сделать прямо сейчас" },
+    long:   { words: "400–550 слов", tokens: 1600, secs: "удар-крючок, история с поворотом, ещё одна байка, что тут творится сейчас, связь с кино, музыкой или звёздами (только реальная, иначе пропусти), детали, которые все пропускают, в конце совет, что сделать прямо сейчас" }
   };
   const HOOK_MODEL = "claude-haiku-4-5-20251001";
   const store = {
@@ -407,13 +408,37 @@ a{color:var(--accent)}
   let map = null, meMarker = null, accCircle = null, layer = null;
   const markers = new Map();
   const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  function ensureMap(pos){
-    if (map || !window.L) return;
+  const TILES = [
+    { url: `https://{s}.basemaps.cartocdn.com/${dark ? "dark_all" : "rastertiles/voyager"}/{z}/{x}/{y}{r}.png`, o: { subdomains: "abcd", maxZoom: 20, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>' } },
+    { url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png", o: { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' } }
+  ];
+  let tileIdx = 0, tileLayer = null;
+  function setTiles(i){
+    tileIdx = i; if (tileLayer) map.removeLayer(tileLayer);
+    let ok = 0, bad = 0;
+    tileLayer = L.tileLayer(TILES[i].url, TILES[i].o).addTo(map);
+    tileLayer.on("tileload", () => { ok++; });
+    tileLayer.on("tileerror", () => { bad++; if (!ok && bad >= 4 && tileIdx + 1 < TILES.length) setTiles(tileIdx + 1); });
+  }
+  // Leaflet fallback: if cdnjs is blocked, try jsDelivr once
+  let leafletLoading = null;
+  function loadLeaflet(){
+    if (window.L) return Promise.resolve(true);
+    if (leafletLoading) return leafletLoading;
+    leafletLoading = new Promise(res => {
+      const css = document.createElement("link"); css.rel = "stylesheet"; css.href = "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"; document.head.appendChild(css);
+      const sc = document.createElement("script"); sc.src = "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js";
+      sc.onload = () => res(!!window.L); sc.onerror = () => res(false); document.head.appendChild(sc);
+    });
+    return leafletLoading;
+  }
+  async function ensureMap(pos){
+    if (map) return;
+    if (!window.L && !(await loadLeaflet())){ say("Карта не загрузилась: похоже, её блокирует сеть или блокировщик рекламы. Список мест ниже всё равно работает.", true); return; }
+    if (map) return;
     map = L.map("map", { zoomControl: false, attributionControl: true }).setView([pos.lat, pos.lon], 16);
-    L.tileLayer(`https://{s}.basemaps.cartocdn.com/${dark ? "dark_all" : "rastertiles/voyager"}/{z}/{x}/{y}{r}.png`, {
-      maxZoom: 20, subdomains: "abcd",
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
-    }).addTo(map);
+    setTiles(0);
+    window.addEventListener("resize", () => map.invalidateSize());
     layer = L.layerGroup().addTo(map);
     const meIcon = L.divIcon({ className: "", iconSize: [120, 120], iconAnchor: [60, 60],
       html: `<div class="me"><svg class="cone" hidden viewBox="0 0 120 120"><defs><radialGradient id="cg" cx="50%" cy="100%" r="100%"><stop offset="0" stop-color="${dark ? "#8497FF" : "#2440E6"}" stop-opacity=".55"/><stop offset="1" stop-color="${dark ? "#8497FF" : "#2440E6"}" stop-opacity="0"/></radialGradient></defs><path d="M60 60 L32 8 A58 58 0 0 1 88 8 Z" fill="url(#cg)"/></svg><div class="dotme"></div></div>` });
@@ -484,7 +509,8 @@ a{color:var(--accent)}
   }
   async function updatePosition(pos, force){
     state.pos = pos;
-    ensureMap(pos); moveMe(pos);
+    store.set("lastPos", JSON.stringify({ lat: pos.lat, lon: pos.lon }));
+    await ensureMap(pos); moveMe(pos);
     $("actions").hidden = false; $("walkRow").hidden = false;
     const moved = state.lastFetchPos ? haversine(state.lastFetchPos, pos) : Infinity;
     if (force || moved > Math.min(250, radius() / 3)){
@@ -636,7 +662,7 @@ a{color:var(--accent)}
     const noHook = top.filter(i => !state.hooks[i.id] && (i._full || i.desc)).slice(0, 16);
     if (noHook.length < 1) return;
     const lines = noHook.map((i, n) => `${n + 1}. ${i.title}${i.desc ? " — " + i.desc : ""}\n   ${(i._full || "").slice(0, 400)}`).join("\n");
-    const prompt = `Ты пишешь крючки для карточек в приложении-гиде. Для каждого места ниже придумай ОДНУ цепляющую фразу по-русски на «ты», 50–95 символов, в духе вирусного поста: шок-факт, контраст, рекорд, байка или связь с кино/знаменитостью. Начинай сразу с сути, без названия места и без эмодзи. Опирайся только на текст ниже и на то, в чём полностью уверен. Никаких выдумок: если зацепиться не за что, верни пустую строку.\n\n${lines}\n\nОтветь только JSON-массивом строк в том же порядке, ровно ${noHook.length} элементов.`;
+    const prompt = `Ты пишешь крючки для карточек в приложении-гиде. Для каждого места ниже придумай ОДНУ фразу-крючок по-русски, 50–95 символов, живой разговорной речью, как будто кричишь другу «смотри!»: шок-факт, скандал, абсурдная цифра, контраст, байка или связь с кино/звездой. Примеры тона: «Тут Брель годами жил в крошечном отеле, пока не сбежал на край света», «Этот скверик заказал лично Наполеон III, и вот зачем». Без названия места в начале, без эмодзи, без кавычек. Опирайся только на текст ниже и на то, в чём полностью уверен. Никаких выдумок: если зацепиться не за что, верни пустую строку.\n\n${lines}\n\nОтветь только JSON-массивом строк в том же порядке, ровно ${noHook.length} элементов.`;
     try {
       const text = await claudeStream([{ role: "user", content: prompt }], () => {}, undefined, 60 * noHook.length + 100, HOOK_MODEL);
       if (run !== state.enrichRun) return;
@@ -714,8 +740,11 @@ a{color:var(--accent)}
   }
 
   // ---------- Claude ----------
-  const VOICE = `Ты — болтливый местный гид и друг путешественника, который плохо знает этот город. Пишешь по-русски, на «ты», цепляюще и с дофамином, как лучшие вирусные треды: первая фраза бьёт сразу (шок-факт, контраст, неожиданная цифра), дальше короткие абзацы, интрига перед раскрытием, «и вот тут начинается самое интересное», рекорды, скандалы, байки, связи с кино, сериалами, песнями, играми, мемами и знаменитостями. Никакой воды, канцелярита и пафоса. Правило номер один, важнее кликбейта: только правдивые факты, никаких выдуманных дат, цифр и цитат. Если не уверен, пропусти или честно скажи «говорят, что».`;
-  const fmt = () => `Формат: ${LEN[len()].secs}. Каждый раздел начинается с заголовка через «## », и заголовки короткие и интригующие, как у кликбейтных постов (не скучные «Из истории» или «Сейчас»). Самое неожиданное — в начале. Всего ${LEN[len()].words}. Без эмодзи и без вступлений вроде «Конечно!».`;
+  const VOICE = `Ты — самый харизматичный друг в компании, который знает этот город вдоль и поперёк. Я читаю твой текст вслух друзьям прямо на улице, поэтому пиши ЖИВОЙ РЕЧЬЮ, как будто сам стоишь рядом и травишь байку: «Так, стоп. Видите вот это здание? Сейчас будет жёстко…», «А теперь внимание…», «И вот тут начинается самое интересное», «Короче, представьте…». Обращайся к компании на «вы» или «ребята», как рассказчик у костра.
+Максимум дофамина: первая же фраза — удар (шок-факт, скандал, абсурдная цифра, неожиданный контраст), дальше крючки и клиффхэнгеры между абзацами («но это ещё цветочки»), драма, рекорды, байки, связи с кино, сериалами, музыкой, мемами и звёздами, эмоции и реакции («представляете?!»). Предложения короткие и ритмичные, их легко читать вслух.
+Никаких сухих справок, перечислений, дат ради дат, канцелярита и списков.
+Правило номер один, важнее любого кликбейта: только правда. Не выдумывай факты, даты, цифры и цитаты. Если сомневаешься, подай как слух («говорят, что…») или пропусти.`;
+  const fmt = () => `Формат: связный рассказ-монолог короткими абзацами по 1–3 предложения, ${LEN[len()].words}. Сюжет: ${LEN[len()].secs}. Можно вставить 2–3 коротких интригующих подзаголовка через «## » для ритма (не «Из истории», а что-то вроде «## А теперь самое дикое»), но без списков и пунктов. Без эмодзи, без вступлений вроде «Конечно!», сразу с крючка.`;
   function wherePhrase(){
     const pl = state.place; if (!pl) return state.pos ? `координаты ${state.pos.lat.toFixed(5)}, ${state.pos.lon.toFixed(5)}` : "";
     return [pl.street, pl.hood, pl.city, pl.country].filter(Boolean).join(", ");
@@ -771,7 +800,30 @@ a{color:var(--accent)}
 
   // ---------- sheets ----------
   function openSheet(id){ $(id).hidden = false; document.body.style.overflow = "hidden"; history.pushState({ sheet: id }, ""); }
-  function closeSheets(){ state.ctl?.abort(); $("sheet").hidden = true; $("settings").hidden = true; document.body.style.overflow = ""; }
+  // ---------- read aloud ----------
+  const tts = window.speechSynthesis;
+  function stopSpeak(){ try { tts?.cancel(); } catch {} $("speak").setAttribute("aria-pressed", "false"); $("speak").querySelector("span").textContent = "Вслух"; }
+  function ruVoice(){
+    const vs = tts.getVoices().filter(v => /^ru/i.test(v.lang));
+    return vs.find(v => /premium|enhanced|milena|yuri|google/i.test(v.name)) || vs[0] || null;
+  }
+  function speakStory(){
+    if (!tts) return;
+    if ($("speak").getAttribute("aria-pressed") === "true"){ stopSpeak(); return; }
+    const txt = [$("pTitle").textContent, $("pHook").hidden ? "" : $("pHook").textContent, $("pStory").innerText, $("pQa").innerText].filter(Boolean).join(".\n");
+    const parts = txt.replace(/\s+\n/g, "\n").match(/[^.!?…\n]+[.!?…]*\s*/g) || [txt];
+    tts.cancel();
+    const v = ruVoice();
+    parts.forEach((p, i) => {
+      const u = new SpeechSynthesisUtterance(p.trim()); u.lang = "ru-RU"; if (v) u.voice = v; u.rate = 1.05;
+      if (i === parts.length - 1) u.onend = stopSpeak;
+      tts.speak(u);
+    });
+    $("speak").setAttribute("aria-pressed", "true"); $("speak").querySelector("span").textContent = "Стоп";
+  }
+  if (tts) tts.getVoices();
+
+  function closeSheets(){ stopSpeak(); state.ctl?.abort(); $("sheet").hidden = true; $("settings").hidden = true; document.body.style.overflow = ""; }
   window.addEventListener("popstate", closeSheets);
   const back = () => { if (history.state?.sheet) history.back(); else closeSheets(); };
 
@@ -780,6 +832,7 @@ a{color:var(--accent)}
     const im = $("pImg");
     if (img){ im.src = img; im.hidden = false; } else { im.hidden = true; im.removeAttribute("src"); }
     $("pTitle").textContent = title; $("pMeta").innerHTML = meta || ""; $("pHook").hidden = true;
+    stopSpeak(); $("speak").hidden = true;
     $("pQa").innerHTML = ""; $("askForm").hidden = true; $("pFoot").hidden = true; $("pActions").innerHTML = "";
     if ($("sheet").hidden) openSheet("sheet");
     $("sheet").scrollTop = 0;
@@ -789,6 +842,7 @@ a{color:var(--accent)}
     const pr = $("pStory");
     if (!key()){
       pr.innerHTML = fallbackHtml || `<p class="wiki">Расскажет Claude: добавь ключ в настройках или открой вопрос в приложении Claude.</p>`;
+      $("speak").hidden = !tts || !fallbackHtml;
       const a = document.createElement("a"); a.className = "btn btn-hi"; a.target = "_blank"; a.rel = "noopener";
       a.href = claudeAppLink(appPrompt || prompt); a.textContent = "Рассказать по-дружески в Claude";
       $("pActions").prepend(a); return;
@@ -799,6 +853,7 @@ a{color:var(--accent)}
       state.turns = [{ role: "user", content: prompt }, { role: "assistant", content: text }];
       $("askForm").hidden = false; $("pFoot").hidden = false;
       $("pModel").textContent = MODELS[model()] + (cached ? " · из памяти" : "");
+      $("speak").hidden = !tts;
       $("retell").onclick = () => { $("pQa").innerHTML = ""; runStory({ id, prompt, fallbackHtml, appPrompt, maxTokens, force: true }); };
     };
     if (cached){ pr.innerHTML = md(cached); finish(cached); return; }
@@ -860,7 +915,7 @@ a{color:var(--accent)}
     const pool = state.items.filter(i => i.dist < 600).slice(0, 14);
     const lines = pool.map(i => `- ${i.title}${i.desc ? " (" + i.desc + ")" : ""}: ${fmtDist(i.dist)}, ${hasH ? relWord(angDiff(i.bearing, state.heading)) : compassWord(i.bearing)}`).join("\n");
     const orient = hasH ? `Я смотрю ${compassWord(state.heading)} (${Math.round(state.heading)}°). Направления ниже даны относительно того, куда я смотрю.` : `Компас выключен, поэтому направления ниже по сторонам света.`;
-    const prompt = `${VOICE}\n\nЯ только что пришёл сюда и вообще не знаю этот город: ${wherePhrase()}. ${orient}\nЧто есть рядом по Википедии:\n${lines || "(в Википедии рядом почти ничего)"}\n\nПомоги мне оглядеться, как будто стоишь рядом. ${hasH ? "Начни с того, что прямо передо мной, потом справа и слева, потом сзади." : "Пройдись по сторонам света."} Говори, на что смотреть глазами (здания, шпили, вывески, деревья), что это и почему интересно. В конце раздел «## Куда пойти первым» с одним-двумя советами, куда шагнуть прямо сейчас и сколько идти. Разделы через «## ». ${len() === "short" ? "120–180" : len() === "long" ? "350–500" : "200–320"} слов, без эмодзи.`;
+    const prompt = `${VOICE}\n\nЯ только что пришёл сюда и вообще не знаю этот город: ${wherePhrase()}. ${orient}\nЧто есть рядом по Википедии:\n${lines || "(в Википедии рядом почти ничего)"}\n\nМы с друзьями стоим тут и крутим головами. Проведи нас взглядом, как экскурсовод, живой речью: ${hasH ? "начни с того, что прямо перед нами, потом «а теперь гляньте направо», налево, и «обернитесь»." : "пройдись по сторонам света: «гляньте на север…»."} Говори, на что смотреть глазами (здания, шпили, вывески, деревья), что это и какая там дичь или байка. Закончи подзаголовком «## Куда рванём первым» и одним-двумя советами, куда шагнуть прямо сейчас и сколько идти. Короткие абзацы, без списков, ${len() === "short" ? "120–180" : len() === "long" ? "350–500" : "200–320"} слов, без эмодзи, сразу с крючка.`;
     prepSheet({
       title: hasH ? `Смотришь ${compassWord(state.heading)}` : "Что вокруг тебя",
       img: pool.find(i => i.img && (!hasH || Math.abs(angDiff(i.bearing, state.heading)) <= 45))?.img?.replace(/\/\d+px-/, "/1200px-") || pool.find(i => i.img)?.img || "",
@@ -872,7 +927,7 @@ a{color:var(--accent)}
   function areaStory(){
     if (!state.pos) return;
     const names = state.items.slice(0, 15).map(i => i.title).join("; ");
-    const prompt = `${VOICE}\n\nЯ сейчас здесь: ${wherePhrase()} (${state.pos.lat.toFixed(5)}, ${state.pos.lon.toFixed(5)}). Рядом отмечены: ${names}.\nРасскажи мне про этот район: какой у него характер, что тут было раньше, кто тут жил из знаменитостей, где снимали кино, что тут едят и куда пройтись минут на 30–60. Разделы через «## »: «Где ты», «Из истории», «Знаменитости и кино», «Сейчас», «Маршрут на час». ${LEN[len()].words.replace(/\d+/g, n => String(Math.round(n * 1.2)))}, без эмодзи.`;
+    const prompt = `${VOICE}\n\nЯ сейчас здесь: ${wherePhrase()} (${state.pos.lat.toFixed(5)}, ${state.pos.lon.toFixed(5)}). Рядом отмечены: ${names}.\nРасскажи нам с друзьями про этот район живой речью: какой у него характер, какая тут была дичь раньше, кто из звёзд тут жил, где снимали кино, что тут едят и куда пройтись минут на 30–60. Можно 3–4 интригующих подзаголовка через «## », последний про маршрут на час. Короткие абзацы, без списков, ${LEN[len()].words.replace(/\d+/g, n => String(Math.round(n * 1.2)))}, без эмодзи, сразу с крючка.`;
     const title = state.place?.hood || state.place?.city || "Этот район";
     prepSheet({ title, img: state.items.find(i => i.img)?.img?.replace(/\/\d+px-/, "/1200px-") || "", meta: `<span>${esc(wherePhrase())}</span>` });
     $("pActions").innerHTML = `<a class="btn btn-ghost" href="https://www.openstreetmap.org/?mlat=${state.pos.lat}&mlon=${state.pos.lon}#map=16/${state.pos.lat}/${state.pos.lon}" target="_blank" rel="noopener">Карта</a>`;
@@ -927,7 +982,7 @@ a{color:var(--accent)}
       const t = await claudeStream(msgs, x => { show(x); pr.classList.add("caret"); }, state.ctl.signal);
       show(t);
       state.turns = [{ role: "user", content: text + "\n\n(К этому сообщению было приложено фото.)" }, { role: "assistant", content: t }];
-      $("askForm").hidden = false; $("pFoot").hidden = false; $("pModel").textContent = MODELS[model()];
+      $("askForm").hidden = false; $("pFoot").hidden = false; $("pModel").textContent = MODELS[model()]; $("speak").hidden = !tts;
       $("retell").onclick = () => photoStory(file);
       $("pActions").innerHTML = `<a class="btn btn-ghost" target="_blank" rel="noopener" href="https://www.google.com/search?tbm=isch&q=${enc($("pTitle").textContent)}">Ещё фото</a>`;
     } catch (e){ const m = apiErr(e); if (m) pr.innerHTML = `<p class="wiki" style="color:var(--warn)">${m}</p>`; }
@@ -1000,13 +1055,17 @@ a{color:var(--accent)}
   $("sortFront").addEventListener("click", () => { if (state.heading == null){ toggleCompass(); return; } setSort("front"); });
   $("walk").addEventListener("change", e => e.target.checked ? startWalk() : stopWalk());
   $("closeSheet").addEventListener("click", back);
+  $("speak").addEventListener("click", speakStory);
   $("closeSettings").addEventListener("click", back);
   $("openSettings").addEventListener("click", openSettings);
   $("cam").addEventListener("change", e => photoStory(e.target.files && e.target.files[0]));
   $("askForm").addEventListener("submit", e => { e.preventDefault(); const v = $("askInput").value.trim(); if (!v) return; $("askInput").value = ""; ask(v); });
 
   if (!window.isSecureContext) say("Геолокация работает только по https. Открой приложение по ссылке с https://", true);
-  if (!window.L) say("Карта не загрузилась. Проверь интернет и обнови страницу.", true);
+  window.addEventListener("error", e => { if (e.message) say("Что-то сломалось: " + esc(e.message) + ". Сделай скриншот и покажи мне.", true); });
+  window.addEventListener("unhandledrejection", e => { const m = e.reason && (e.reason.message || String(e.reason)); if (m && !/abort/i.test(m)) say("Что-то сломалось: " + esc(m), true); });
+  // show the map right away at the last known spot, then refine with GPS
+  try { const lp = JSON.parse(store.get("lastPos", "null")); if (lp && isFinite(lp.lat)) ensureMap(lp).then(() => { if (map && !state.pos) moveMe({ ...lp, acc: 0 }); }); } catch {}
   navigator.permissions?.query({ name: "geolocation" }).then(p => { if (p.state === "granted") locate(true); }).catch(() => {});
 })();
 </script>
