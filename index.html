@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2440E6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Гид">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Болтливый гид</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#EEF1EC; --surface:#FFFFFF; --surface-2:#F5F7F4; --ink:#15201C; --muted:#5B6863; --line:#D3DBD5;
+  --accent:#2440E6; --accent-ink:#FFFFFF; --hi:#FFD23F; --hi-ink:#15201C; --warn:#C8237A;
+  --shadow:0 12px 32px -16px rgba(21,32,28,.35);
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --body:"Onest",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    color-scheme:dark;
+    --bg:#0F1513; --surface:#182120; --surface-2:#141C1A; --ink:#E7EEEA; --muted:#98A6A0; --line:#2A3632;
+    --accent:#8497FF; --accent-ink:#0F1513; --hi:#E9BE2B; --hi-ink:#0F1513; --warn:#F06AB0;
+    --shadow:0 12px 32px -16px rgba(0,0,0,.8);
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 var(--body);-webkit-tap-highlight-color:transparent;
+  padding-inline:16px;padding-block:calc(var(--safe-t) + 14px) calc(var(--safe-b) + 40px)}
+button,input{font:inherit;color:inherit}
+a{color:var(--accent)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:8px}
+[hidden]{display:none!important}
+.app{max-width:760px;margin:0 auto;display:grid;gap:18px}
+
+.top{display:flex;align-items:center;gap:12px}
+.pin{width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--accent);display:grid;place-items:center;flex:none}
+.pin::after{content:"";width:11px;height:11px;border-radius:50%;background:var(--hi)}
+.brand{font-family:var(--display);font-weight:800;font-size:19px;line-height:1;flex:1}
+.icon-btn{width:42px;height:42px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);display:grid;place-items:center;cursor:pointer}
+.icon-btn svg{width:20px;height:20px}
+
+.here{background:var(--surface);border-radius:20px;padding:18px;display:grid;gap:10px;box-shadow:var(--shadow)}
+.eyebrow{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.here h1{font-family:var(--display);font-weight:700;font-size:clamp(22px,6vw,30px);line-height:1.12;margin:0;letter-spacing:-.015em;text-wrap:balance}
+.here h1 mark{background:linear-gradient(transparent 60%,var(--hi) 60%);color:inherit}
+.coords{font-family:var(--mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 16px;border-radius:14px;border:0;cursor:pointer;font-weight:600;text-decoration:none;line-height:1.2}
+.btn svg{width:18px;height:18px;flex:none}
+.btn-main{background:var(--accent);color:var(--accent-ink)}
+.btn-ghost{background:transparent;border:1.5px solid var(--line);color:var(--ink)}
+.btn-hi{background:var(--hi);color:var(--hi-ink)}
+.btn[disabled]{opacity:.5;cursor:default}
+.toggle{display:inline-flex;align-items:center;gap:10px;font-size:14px;font-weight:500;cursor:pointer;user-select:none}
+.toggle input{flex:none;appearance:none;width:42px;height:24px;border-radius:999px;background:var(--line);position:relative;cursor:pointer;margin:0;transition:background .2s}
+.toggle input::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--surface);transition:transform .2s}
+.toggle input:checked{background:var(--accent)}
+.toggle input:checked::after{transform:translateX(18px)}
+.msg{font-size:14px;color:var(--muted);margin:0}
+.msg.err{color:var(--warn)}
+
+.dots{display:inline-flex;gap:4px;vertical-align:middle}
+.dots i{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:b 1s infinite ease-in-out}
+.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+@keyframes b{0%,80%,100%{transform:translateY(0);opacity:.4}40%{transform:translateY(-5px);opacity:1}}
+
+.list-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.list-head h2{font-family:var(--display);font-weight:500;font-size:16px;margin:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.card{position:relative;display:grid;grid-template-rows:auto 1fr;text-align:left;border:0;padding:0;border-radius:16px;overflow:hidden;background:var(--surface);cursor:pointer;box-shadow:0 1px 0 var(--line)}
+.card .ph{aspect-ratio:4/3;width:100%;max-width:100%;object-fit:cover;display:block;background:var(--surface-2)}
+.card .noph{aspect-ratio:4/3;display:grid;place-items:center;background:repeating-linear-gradient(135deg,var(--surface-2) 0 10px,var(--bg) 10px 20px);color:var(--muted);font-family:var(--display);font-size:28px}
+.card .tx{padding:10px 12px 12px;display:grid;gap:4px;align-content:start}
+.card .nm{font-weight:700;font-size:15px;line-height:1.25}
+.card .ds{font-size:13px;color:var(--muted);line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.dist{position:absolute;top:8px;left:8px;background:var(--surface);color:var(--ink);font-family:var(--mono);font-size:12px;font-weight:500;padding:3px 8px;border-radius:999px;font-variant-numeric:tabular-nums}
+.card.new .dist{background:var(--hi);color:var(--hi-ink)}
+
+/* sheet */
+.sheet{position:fixed;inset:0;z-index:20;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch}
+.sheet-bar{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:calc(var(--safe-t) + 10px) 16px 10px;background:linear-gradient(var(--bg) 70%,transparent)}
+.sheet-body{max-width:760px;margin:0 auto;padding:0 16px calc(var(--safe-b) + 40px);display:grid;gap:16px}
+.hero{width:100%;max-width:100%;max-height:52vh;object-fit:cover;border-radius:20px;display:block;background:var(--surface-2)}
+.sheet h2{font-family:var(--display);font-weight:700;font-size:clamp(24px,6.5vw,32px);line-height:1.1;margin:0;letter-spacing:-.02em;text-wrap:balance}
+.meta{display:flex;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.meta .m{font-family:var(--mono)}
+.story{background:var(--surface);border-radius:20px;padding:18px;box-shadow:var(--shadow)}
+.prose{max-width:65ch;font-size:16.5px}
+.prose h3{font-family:var(--display);font-weight:500;font-size:14.5px;letter-spacing:.02em;margin:20px 0 6px;display:flex;align-items:center;gap:8px}
+.prose h3::before{content:"";width:14px;height:3px;background:var(--hi);border-radius:2px}
+.prose p{margin:0 0 10px}
+.prose ul{margin:0 0 10px;padding-left:20px}
+.prose li{margin-bottom:4px}
+.prose > :first-child{margin-top:0}
+.prose > :last-child{margin-bottom:0}
+.caret::after{content:"▍";color:var(--accent);animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.wiki{font-size:15px;color:var(--muted);margin:0}
+.ask{display:flex;gap:8px}
+.ask input{flex:1;min-width:0;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface)}
+.q{font-weight:600;border-left:3px solid var(--hi);padding:6px 12px;margin:14px 0 8px}
+
+/* settings */
+.field{display:grid;gap:6px}
+.field label{font-weight:600;font-size:14px}
+.field input{padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);font-family:var(--mono);font-size:14px}
+.card-note{background:var(--surface);border-radius:16px;padding:14px 16px;font-size:14px;color:var(--muted)}
+.card-note b{color:var(--ink)}
+
+.toast{position:fixed;left:16px;right:16px;bottom:calc(var(--safe-b) + 16px);z-index:30;max-width:520px;margin:0 auto;background:var(--ink);color:var(--bg);border-radius:16px;padding:12px 14px;display:flex;gap:12px;align-items:center;box-shadow:var(--shadow);cursor:pointer}
+.toast img{width:52px;height:52px;border-radius:10px;object-fit:cover;flex:none}
+.toast b{display:block}
+.toast span{font-size:13px;opacity:.8}
+#cam{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="top">
+    <div class="pin" aria-hidden="true"></div>
+    <div class="brand">Болтливый гид</div>
+    <label class="icon-btn" for="cam" title="Сфоткать, что вижу" aria-label="Сфоткать, что вижу">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+    </label>
+    <input id="cam" type="file" accept="image/*" capture="environment">
+    <button class="icon-btn" id="openSettings" type="button" aria-label="Настройки">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+  </header>
+
+  <section class="here" aria-live="polite">
+    <span class="eyebrow" id="hereLabel">Где ты</span>
+    <h1 id="hereTitle">Нажми кнопку, и я <mark>осмотрюсь</mark></h1>
+    <span class="coords" id="coords"></span>
+    <div class="row">
+      <button class="btn btn-main" id="locate" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+        <span id="locateText">Где я?</span>
+      </button>
+      <button class="btn btn-ghost" id="areaStory" type="button" hidden>Про район</button>
+    </div>
+    <label class="toggle"><input type="checkbox" id="walk"> Режим прогулки: подскажу, когда подойдёшь к чему-то интересному</label>
+    <p class="msg" id="msg" hidden></p>
+  </section>
+
+  <section id="listWrap" hidden>
+    <div class="list-head">
+      <h2>Рядом с тобой</h2>
+      <span class="msg" id="count"></span>
+    </div>
+    <div class="grid" id="grid" style="margin-top:10px"></div>
+  </section>
+
+  <div class="card-note" id="keyNote" hidden>
+    <b>Хочешь, чтобы я рассказывал сам, по-дружески?</b> Добавь API-ключ Claude в настройках (шестерёнка сверху). Без ключа будет справка из Википедии и кнопка «Спросить Claude», которая откроет приложение Claude с готовым вопросом.
+  </div>
+</main>
+
+<!-- place sheet -->
+<section class="sheet" id="sheet" hidden aria-modal="true" role="dialog" aria-labelledby="pTitle">
+  <div class="sheet-bar">
+    <button class="icon-btn" id="closeSheet" type="button" aria-label="Назад">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body">
+    <img class="hero" id="pImg" alt="" hidden>
+    <div style="display:grid;gap:8px">
+      <h2 id="pTitle"></h2>
+      <div class="meta" id="pMeta"></div>
+    </div>
+    <div class="story">
+      <div class="prose" id="pStory"></div>
+      <div id="pQa"></div>
+      <form class="ask" id="askForm" hidden autocomplete="off" style="margin-top:14px">
+        <input id="askInput" placeholder="Спроси ещё: «а где тут кофе?»" enterkeyhint="send" aria-label="Вопрос">
+        <button class="btn btn-ghost" type="submit">Спросить</button>
+      </form>
+    </div>
+    <div class="row" id="pActions"></div>
+  </div>
+</section>
+
+<!-- settings -->
+<section class="sheet" id="settings" hidden aria-modal="true" role="dialog" aria-labelledby="sTitle">
+  <div class="sheet-bar">
+    <button class="icon-btn" id="closeSettings" type="button" aria-label="Назад">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body">
+    <h2 id="sTitle">Настройки</h2>
+    <div class="field">
+      <label for="apiKey">API-ключ Claude</label>
+      <input id="apiKey" type="password" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
+      <p class="msg">Ключ хранится только в этом браузере и уходит напрямую в api.anthropic.com. Взять можно на console.anthropic.com → API Keys. Рассказ стоит примерно цент-два.</p>
+    </div>
+    <div class="field">
+      <label for="radius">Радиус поиска, метров</label>
+      <input id="radius" type="number" min="200" max="10000" step="100" inputmode="numeric">
+    </div>
+    <div class="row">
+      <button class="btn btn-main" id="saveSettings" type="button">Сохранить</button>
+      <button class="btn btn-ghost" id="clearKey" type="button">Удалить ключ</button>
+    </div>
+    <p class="msg" id="sMsg" hidden></p>
+  </div>
+</section>
+
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const MODEL = "claude-sonnet-5";
+  const store = {
+    get(k, d = null){ try { const v = localStorage.getItem("gid." + k); return v == null ? d : v; } catch { return d; } },
+    set(k, v){ try { v == null ? localStorage.removeItem("gid." + k) : localStorage.setItem("gid." + k, v); } catch {} }
+  };
+  const state = {
+    pos: null, place: null, items: [], seen: new Set(JSON.parse(store.get("seen", "[]"))),
+    watchId: null, lastFetchPos: null, notified: new Set(), ctl: null, turns: []
+  };
+  const key = () => store.get("key", "");
+  const radius = () => Math.min(10000, Math.max(200, Number(store.get("radius", "1000")) || 1000));
+
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const enc = encodeURIComponent;
+  const dots = '<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>';
+
+  function md(src){
+    const lines = src.replace(/\r/g, "").split("\n");
+    let out = "", list = false, para = [];
+    const inline = t => esc(t).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/(^|[^*])\*(?!\s)(.+?)\*/g, "$1<em>$2</em>");
+    const flush = () => { if (para.length){ out += "<p>" + inline(para.join(" ")) + "</p>"; para = []; } };
+    const end = () => { if (list){ out += "</ul>"; list = false; } };
+    for (const raw of lines){
+      const l = raw.trim(); let m;
+      if (!l){ flush(); end(); continue; }
+      if ((m = l.match(/^#{1,4}\s+(.*)$/))){ flush(); end(); out += "<h3>" + inline(m[1].replace(/\*\*/g, "")) + "</h3>"; continue; }
+      if ((m = l.match(/^[-*•]\s+(.*)$/))){ flush(); if (!list){ out += "<ul>"; list = true; } out += "<li>" + inline(m[1]) + "</li>"; continue; }
+      end(); para.push(l);
+    }
+    flush(); end(); return out;
+  }
+
+  function haversine(a, b){
+    const R = 6371000, r = x => x * Math.PI / 180;
+    const dLat = r(b.lat - a.lat), dLon = r(b.lon - a.lon);
+    const h = Math.sin(dLat/2)**2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLon/2)**2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+  const fmtDist = m => m < 1000 ? Math.round(m / 10) * 10 + " м" : (m / 1000).toFixed(1).replace(".", ",") + " км";
+  const walkMin = m => Math.max(1, Math.round(m / 75));
+
+  function say(text, err){
+    const m = $("msg");
+    if (!text){ m.hidden = true; return; }
+    m.hidden = false; m.className = "msg" + (err ? " err" : ""); m.innerHTML = text;
+  }
+
+  // ---------- location ----------
+  function getPos(){
+    return new Promise((res, rej) => {
+      if (!navigator.geolocation) return rej({ code: -1 });
+      navigator.geolocation.getCurrentPosition(p => res(p), rej, { enableHighAccuracy: true, timeout: 20000, maximumAge: 15000 });
+    });
+  }
+  function geoErr(e){
+    if (e && e.code === 1) return "Браузер не дал доступ к геолокации. Разреши её для этого сайта в настройках браузера и нажми ещё раз.";
+    if (e && e.code === 3) return "GPS долго думает. Выйди на открытое место и попробуй ещё раз.";
+    if (e && e.code === -1) return "Этот браузер не умеет в геолокацию.";
+    return "Не получилось определить, где ты. Попробуй ещё раз.";
+  }
+
+  async function locate(){
+    $("locate").disabled = true;
+    $("locateText").textContent = "Ищу тебя…";
+    say(dots + " Ловлю GPS");
+    try {
+      const p = await getPos();
+      await updatePosition({ lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy }, true);
+    } catch (e){ say(geoErr(e), true); }
+    finally { $("locate").disabled = false; $("locateText").textContent = "Обновить"; }
+  }
+
+  async function updatePosition(pos, force){
+    state.pos = pos;
+    $("coords").textContent = `${pos.lat.toFixed(5)}, ${pos.lon.toFixed(5)}` + (pos.acc ? ` · ±${Math.round(pos.acc)} м` : "");
+    const moved = state.lastFetchPos ? haversine(state.lastFetchPos, pos) : Infinity;
+    if (force || moved > Math.min(250, radius() / 3)){
+      state.lastFetchPos = pos;
+      say(dots + " Смотрю, что вокруг");
+      const [place] = await Promise.all([reverse(pos).catch(() => null), loadNearby(pos)]);
+      if (place) showPlace(place);
+      say("");
+    } else {
+      resort();
+    }
+    if ($("walk").checked) checkClose();
+  }
+
+  async function reverse(pos){
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&accept-language=ru&lat=${pos.lat}&lon=${pos.lon}`);
+    if (!r.ok) throw 0;
+    const j = await r.json(); const a = j.address || {};
+    const street = [a.road || a.pedestrian || a.square || a.footway, a.house_number].filter(Boolean).join(", ");
+    const hood = a.neighbourhood || a.quarter || a.suburb || a.city_district || "";
+    const city = a.city || a.town || a.village || a.municipality || a.state || "";
+    return { street, hood, city, country: a.country || "", display: j.display_name || "" };
+  }
+  function showPlace(pl){
+    state.place = pl;
+    $("hereLabel").textContent = [pl.hood, pl.city].filter(Boolean).join(" · ") || "Где ты";
+    $("hereTitle").innerHTML = pl.street ? `Ты на <mark>${esc(pl.street)}</mark>` : `Ты в <mark>${esc(pl.hood || pl.city || "интересном месте")}</mark>`;
+    $("areaStory").hidden = false;
+    document.title = (pl.hood || pl.city || "Болтливый гид") + " · Гид";
+  }
+
+  // ---------- Wikipedia ----------
+  async function wikiNearby(lang, pos){
+    const u = `https://${lang}.wikipedia.org/w/api.php?action=query&format=json&origin=*&generator=geosearch` +
+      `&ggscoord=${pos.lat}%7C${pos.lon}&ggsradius=${radius()}&ggslimit=40` +
+      `&prop=coordinates%7Cpageimages%7Cdescription%7Cinfo&inprop=url&piprop=thumbnail&pithumbsize=800&colimit=max`;
+    const r = await fetch(u); if (!r.ok) return [];
+    const j = await r.json();
+    return Object.values(j.query?.pages || {}).filter(p => p.coordinates && p.ns === 0).map(p => ({
+      id: lang + ":" + p.pageid, lang, title: p.title, desc: p.description || "",
+      lat: p.coordinates[0].lat, lon: p.coordinates[0].lon, img: p.thumbnail?.source || "", url: p.fullurl
+    }));
+  }
+  const BORING = /(станция|метро|station|école|school|школа|лицей|lycée|collège|улица|rue |avenue|boulevard|бульвар|проспект|округ|arrondissement|квартал|район|commune|immeuble|здание суда\b)/i;
+
+  async function loadNearby(pos){
+    const [ru, en] = await Promise.all([wikiNearby("ru", pos).catch(() => []), wikiNearby("en", pos).catch(() => [])]);
+    const seenTitles = new Set();
+    const all = [...ru];
+    // English articles fill in what Russian Wikipedia lacks (match by coordinates)
+    for (const e of en){
+      if (ru.some(r => Math.abs(r.lat - e.lat) < 0.0004 && Math.abs(r.lon - e.lon) < 0.0004)) continue;
+      all.push(e);
+    }
+    const out = [];
+    for (const it of all){
+      const k = it.title.toLowerCase(); if (seenTitles.has(k)) continue; seenTitles.add(k);
+      it.dist = haversine(pos, it);
+      it.score = it.dist * (it.img ? 1 : 2.2) * (BORING.test(it.title + " " + it.desc) ? 2.5 : 1);
+      out.push(it);
+    }
+    out.sort((a, b) => a.score - b.score);
+    state.items = out.slice(0, 40);
+    renderGrid();
+  }
+  function resort(){
+    if (!state.pos) return;
+    for (const it of state.items){ it.dist = haversine(state.pos, it); }
+    renderGrid();
+  }
+
+  function renderGrid(){
+    const g = $("grid"); g.innerHTML = "";
+    $("listWrap").hidden = false;
+    if (!state.items.length){
+      g.innerHTML = `<p class="msg">В радиусе ${fmtDist(radius())} в Википедии ничего не отмечено. Увеличь радиус в настройках или пройдись немного.</p>`;
+      $("count").textContent = ""; return;
+    }
+    $("count").textContent = `${state.items.length} мест · до ${fmtDist(radius())}`;
+    for (const it of state.items){
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "card" + (state.seen.has(it.id) ? "" : " new");
+      b.innerHTML = (it.img ? `<img class="ph" loading="lazy" src="${esc(it.img)}" alt="">` : `<div class="noph" aria-hidden="true">${esc(it.title.charAt(0))}</div>`) +
+        `<span class="dist">${fmtDist(it.dist)}</span>` +
+        `<span class="tx"><span class="nm">${esc(it.title)}</span>${it.desc ? `<span class="ds">${esc(it.desc)}</span>` : ""}</span>`;
+      b.addEventListener("click", () => openPlace(it));
+      g.appendChild(b);
+    }
+    $("keyNote").hidden = !!key();
+  }
+
+  async function wikiExtract(it){
+    const u = `https://${it.lang}.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=extracts&explaintext=1&exintro=1&redirects=1&titles=${enc(it.title)}`;
+    try {
+      const j = await (await fetch(u)).json();
+      const p = Object.values(j.query?.pages || {})[0];
+      return (p?.extract || "").trim();
+    } catch { return ""; }
+  }
+
+  // ---------- Claude ----------
+  const VOICE = `Ты — болтливый местный гид и хороший друг путешественника. Пишешь по-русски, на «ты», легко и с юмором, как в переписке с другом, без канцелярита и пафоса. Любишь неожиданные детали: байки, рекорды, связи с кино, сериалами, песнями, играми, мемами и знаменитостями. Правило номер один: никаких выдуманных фактов, дат и цитат. Если не уверен, пропусти или честно скажи «говорят, что».`;
+  const FMT = `Формат: разделы с заголовками через «## »: «Коротко» (1–2 фразы-крючка), «Из истории», «Сейчас» (чем место живёт сегодня), «Поп-культура» (только реальные связи; если их нет, пропусти раздел), «Лайфхак» (практичный совет: когда прийти, что посмотреть или заказать, откуда лучший вид). В каждом разделе 2–4 предложения или короткий список через «- ». Всего 220–380 слов. Без эмодзи и без вступлений вроде «Конечно!».`;
+
+  function wherePhrase(){
+    const pl = state.place; if (!pl) return state.pos ? `координаты ${state.pos.lat.toFixed(5)}, ${state.pos.lon.toFixed(5)}` : "";
+    return [pl.street, pl.hood, pl.city, pl.country].filter(Boolean).join(", ");
+  }
+
+  async function claudeStream(messages, onText, signal, maxTokens = 1400){
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST", signal,
+      headers: { "content-type": "application/json", "x-api-key": key(), "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+      body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, stream: true, messages })
+    });
+    if (!r.ok){
+      let t = ""; try { t = (await r.json()).error?.message || ""; } catch {}
+      const e = new Error(t || ("HTTP " + r.status)); e.status = r.status; throw e;
+    }
+    const reader = r.body.getReader(); const dec = new TextDecoder();
+    let buf = "", text = "";
+    for (;;){
+      const { value, done } = await reader.read(); if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf("\n")) >= 0){
+        const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+        if (!line.startsWith("data:")) continue;
+        try {
+          const ev = JSON.parse(line.slice(5));
+          if (ev.type === "content_block_delta" && ev.delta?.type === "text_delta"){ text += ev.delta.text; onText(text); }
+          if (ev.type === "error") throw new Error(ev.error?.message || "stream error");
+        } catch (e){ if (e.message && !/JSON/.test(e.message)) throw e; }
+      }
+    }
+    return text;
+  }
+  function apiErr(e){
+    if (e.name === "AbortError") return "";
+    if (e.status === 401) return "Ключ не подошёл. Проверь его в настройках.";
+    if (e.status === 429) return "Слишком много запросов. Подожди минутку.";
+    if (e.status === 529 || e.status >= 500) return "Claude сейчас перегружен. Попробуй через минуту.";
+    if (e.status === 400 && /credit|balance/i.test(e.message)) return "На аккаунте API закончились деньги. Пополни баланс в console.anthropic.com.";
+    return "Не получилось связаться с Claude: " + esc(e.message || "ошибка сети");
+  }
+
+  function claudeAppLink(prompt){
+    return "https://claude.ai/new?q=" + enc(prompt);
+  }
+
+  // ---------- place sheet ----------
+  function openSheet(id){ $(id).hidden = false; document.body.style.overflow = "hidden"; history.pushState({ sheet: id }, ""); }
+  function closeSheets(){ state.ctl?.abort(); $("sheet").hidden = true; $("settings").hidden = true; document.body.style.overflow = ""; }
+  window.addEventListener("popstate", closeSheets);
+  const back = () => { if (history.state?.sheet) history.back(); else closeSheets(); };
+
+  async function openPlace(it){
+    state.seen.add(it.id); store.set("seen", JSON.stringify([...state.seen].slice(-500)));
+    state.ctl?.abort(); state.ctl = new AbortController();
+    state.turns = [];
+    const img = $("pImg");
+    if (it.img){ img.src = it.img.replace(/\/\d+px-/, "/1200px-"); img.onerror = () => { img.onerror = null; img.src = it.img; }; img.alt = it.title; img.hidden = false; }
+    else { img.hidden = true; img.removeAttribute("src"); }
+    $("pTitle").textContent = it.title;
+    $("pMeta").innerHTML = `<span class="m">${fmtDist(it.dist)} · ~${walkMin(it.dist)} мин пешком</span>` + (it.desc ? `<span>${esc(it.desc)}</span>` : "");
+    $("pQa").innerHTML = ""; $("askForm").hidden = true;
+    const pr = $("pStory"); pr.innerHTML = `<p class="wiki">${dots} Листаю Википедию</p>`;
+    const nav = `https://www.google.com/maps/dir/?api=1&travelmode=walking&destination=${it.lat},${it.lon}`;
+    const photos = `https://www.google.com/search?tbm=isch&q=${enc(it.title)}`;
+    openSheet("sheet");
+    $("sheet").scrollTop = 0;
+
+    const extract = await wikiExtract(it);
+    const prompt = `${VOICE}\n\nЯ стою примерно в ${fmtDist(it.dist)} от места «${it.title}»${it.desc ? " (" + it.desc + ")" : ""}. Я сейчас: ${wherePhrase()}.\nВот вступление статьи из Википедии как опора (можешь добавить и то, что знаешь сам, если уверен):\n"""${extract.slice(0, 3000)}"""\n\nРасскажи мне про это место. ${FMT}`;
+
+    const actions = $("pActions");
+    actions.innerHTML =
+      `<a class="btn btn-main" href="${nav}" target="_blank" rel="noopener">Маршрут</a>` +
+      `<a class="btn btn-ghost" href="${photos}" target="_blank" rel="noopener">Ещё фото</a>` +
+      `<a class="btn btn-ghost" href="${esc(it.url)}" target="_blank" rel="noopener">Википедия</a>`;
+
+    if (key()){
+      pr.innerHTML = `<p class="wiki">${dots} Вспоминаю всё самое интересное</p>`;
+      state.turns = [{ role: "user", content: prompt }];
+      try {
+        const text = await claudeStream(state.turns, t => { pr.innerHTML = md(t); pr.classList.add("caret"); }, state.ctl.signal);
+        pr.classList.remove("caret");
+        state.turns.push({ role: "assistant", content: text });
+        $("askForm").hidden = false;
+      } catch (e){
+        pr.classList.remove("caret");
+        const m = apiErr(e); if (!m) return;
+        pr.innerHTML = (extract ? `<p>${esc(extract.slice(0, 900))}</p>` : "") + `<p class="wiki" style="color:var(--warn)">${m}</p>`;
+      }
+    } else {
+      pr.innerHTML = (extract ? md(extract.split("\n").slice(0, 4).join("\n\n")) : `<p class="wiki">В Википедии про это место почти ничего нет.</p>`);
+      const a = document.createElement("a");
+      a.className = "btn btn-hi"; a.target = "_blank"; a.rel = "noopener";
+      a.href = claudeAppLink(`${VOICE}\n\nЯ стою рядом с местом «${it.title}» (${wherePhrase()}). Расскажи мне про него. ${FMT}`);
+      a.textContent = "Рассказать по-дружески в Claude";
+      actions.prepend(a);
+    }
+  }
+
+  async function ask(q){
+    if (!state.turns.length) return;
+    const wrap = document.createElement("div");
+    wrap.innerHTML = `<p class="q">${esc(q)}</p><div class="prose"><p class="wiki">${dots}</p></div>`;
+    $("pQa").appendChild(wrap);
+    const out = wrap.lastElementChild;
+    const msgs = [...state.turns, { role: "user", content: q + "\n\n(Отвечай в том же стиле, коротко: 60–180 слов. Не выдумывай факты.)" }];
+    state.ctl?.abort(); state.ctl = new AbortController();
+    try {
+      const t = await claudeStream(msgs.length > 9 ? [msgs[0], ...msgs.slice(-8)] : msgs, x => { out.innerHTML = md(x); out.classList.add("caret"); }, state.ctl.signal, 700);
+      state.turns.push({ role: "user", content: q }, { role: "assistant", content: t });
+    } catch (e){ const m = apiErr(e); if (m) out.innerHTML = `<p class="wiki" style="color:var(--warn)">${m}</p>`; }
+    out.classList.remove("caret");
+  }
+
+  async function areaStory(){
+    if (!state.pos) return;
+    const names = state.items.slice(0, 15).map(i => i.title).join("; ");
+    const prompt = `${VOICE}\n\nЯ сейчас здесь: ${wherePhrase()} (${state.pos.lat.toFixed(5)}, ${state.pos.lon.toFixed(5)}). Рядом отмечены: ${names}.\nРасскажи мне про этот район: какой у него характер, что тут было раньше, кто тут жил из знаменитостей, где снимали кино, что тут едят и куда пройтись минут на 30–60. Разделы через «## »: «Где ты», «Из истории», «Знаменитости и кино», «Сейчас», «Маршрут на час». 250–400 слов, без эмодзи.`;
+    const it = { id: "area", title: state.place?.hood || state.place?.city || "Этот район", desc: state.place?.city || "", dist: 0, lat: state.pos.lat, lon: state.pos.lon, img: state.items.find(i => i.img)?.img || "", url: `https://www.openstreetmap.org/?mlat=${state.pos.lat}&mlon=${state.pos.lon}#map=16/${state.pos.lat}/${state.pos.lon}` };
+    state.ctl?.abort(); state.ctl = new AbortController();
+    const img = $("pImg"); if (it.img){ img.src = it.img; img.hidden = false; } else img.hidden = true;
+    $("pTitle").textContent = it.title;
+    $("pMeta").innerHTML = `<span>${esc(wherePhrase())}</span>`;
+    $("pQa").innerHTML = ""; $("askForm").hidden = true;
+    $("pActions").innerHTML = `<a class="btn btn-ghost" href="${esc(it.url)}" target="_blank" rel="noopener">Карта</a>`;
+    const pr = $("pStory");
+    openSheet("sheet"); $("sheet").scrollTop = 0;
+    if (!key()){
+      pr.innerHTML = `<p class="wiki">Про район расскажет Claude. Добавь ключ в настройках или открой вопрос в приложении Claude.</p>`;
+      const a = document.createElement("a"); a.className = "btn btn-hi"; a.target = "_blank"; a.rel = "noopener";
+      a.href = claudeAppLink(prompt); a.textContent = "Спросить в Claude"; $("pActions").prepend(a);
+      return;
+    }
+    pr.innerHTML = `<p class="wiki">${dots} Осматриваю район</p>`;
+    state.turns = [{ role: "user", content: prompt }];
+    try {
+      const t = await claudeStream(state.turns, x => { pr.innerHTML = md(x); pr.classList.add("caret"); }, state.ctl.signal, 1600);
+      state.turns.push({ role: "assistant", content: t }); $("askForm").hidden = false;
+    } catch (e){ const m = apiErr(e); if (m) pr.innerHTML = `<p class="wiki" style="color:var(--warn)">${m}</p>`; }
+    pr.classList.remove("caret");
+  }
+
+  // ---------- photo ----------
+  function toJpeg(file){
+    return new Promise((res, rej) => {
+      const url = URL.createObjectURL(file); const im = new Image();
+      im.onload = () => {
+        const s = Math.min(1, 1400 / Math.max(im.width, im.height));
+        const c = document.createElement("canvas"); c.width = Math.round(im.width * s); c.height = Math.round(im.height * s);
+        c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+        res({ url, data: c.toDataURL("image/jpeg", 0.85).split(",")[1] });
+      };
+      im.onerror = rej; im.src = url;
+    });
+  }
+  async function photoStory(file){
+    if (!file) return;
+    const img = $("pImg");
+    let jp; try { jp = await toJpeg(file); } catch { say("Не получилось открыть фото.", true); return; }
+    img.src = jp.url; img.alt = "Твоё фото"; img.hidden = false;
+    $("pTitle").textContent = "Что у тебя на фото";
+    $("pMeta").innerHTML = state.place ? `<span>${esc(wherePhrase())}</span>` : "";
+    $("pQa").innerHTML = ""; $("askForm").hidden = true; $("pActions").innerHTML = "";
+    const pr = $("pStory");
+    openSheet("sheet"); $("sheet").scrollTop = 0;
+    if (!key()){ pr.innerHTML = `<p class="wiki">Чтобы я узнавал места по фото, добавь API-ключ Claude в настройках. Или отправь это фото в приложение Claude.</p>`; return; }
+    const near = state.items.slice(0, 12).map(i => `${i.title} (${fmtDist(i.dist)})`).join("; ");
+    const text = `${VOICE}\n\nНа фото то, что я вижу прямо сейчас. Я тут: ${wherePhrase() || "неизвестно"}.${near ? " Рядом по Википедии: " + near + "." : ""}\nПервой строкой напиши «# » и название того, что на фото. Если уверенно узнать не можешь, честно скажи и расскажи, что видно: стиль, эпоха, что это скорее всего.\nДальше: ${FMT}`;
+    state.ctl?.abort(); state.ctl = new AbortController();
+    pr.innerHTML = `<p class="wiki">${dots} Разглядываю</p>`;
+    const show = t => {
+      const m = t.match(/^\s*#\s+(.+)\n?/);
+      if (m){ $("pTitle").textContent = m[1].trim(); t = t.slice(t.indexOf(m[0]) + m[0].length); }
+      pr.innerHTML = md(t);
+    };
+    try {
+      const msgs = [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: "image/jpeg", data: jp.data } }, { type: "text", text }] }];
+      const t = await claudeStream(msgs, x => { show(x); pr.classList.add("caret"); }, state.ctl.signal);
+      show(t);
+      state.turns = [{ role: "user", content: text + "\n\n(К этому сообщению было приложено фото.)" }, { role: "assistant", content: t }];
+      $("askForm").hidden = false;
+      $("pActions").innerHTML = `<a class="btn btn-ghost" target="_blank" rel="noopener" href="https://www.google.com/search?tbm=isch&q=${enc($("pTitle").textContent)}">Ещё фото</a>`;
+    } catch (e){ const m = apiErr(e); if (m) pr.innerHTML = `<p class="wiki" style="color:var(--warn)">${m}</p>`; }
+    pr.classList.remove("caret");
+    $("cam").value = "";
+  }
+
+  // ---------- walk mode ----------
+  let wakeLock = null;
+  async function startWalk(){
+    if (!navigator.geolocation){ $("walk").checked = false; say(geoErr({ code: -1 }), true); return; }
+    try { wakeLock = await navigator.wakeLock?.request("screen"); } catch {}
+    say("Гуляем. Держи вкладку открытой, я подскажу, когда подойдёшь к чему-то интересному.");
+    state.watchId = navigator.geolocation.watchPosition(
+      p => updatePosition({ lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy }, false).catch(() => {}),
+      e => say(geoErr(e), true),
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 30000 }
+    );
+  }
+  function stopWalk(){
+    if (state.watchId != null) navigator.geolocation.clearWatch(state.watchId);
+    state.watchId = null; try { wakeLock?.release(); } catch {} wakeLock = null; say("");
+  }
+  function checkClose(){
+    const hit = state.items.find(i => i.dist < 90 && i.img && !state.notified.has(i.id) && !state.seen.has(i.id));
+    if (!hit) return;
+    state.notified.add(hit.id);
+    const t = $("toast");
+    t.innerHTML = `<img src="${esc(hit.img)}" alt=""><div><b>${esc(hit.title)}</b><span>${fmtDist(hit.dist)} от тебя. Нажми, расскажу</span></div>`;
+    t.hidden = false; t.onclick = () => { t.hidden = true; openPlace(hit); };
+    try { navigator.vibrate?.([80, 60, 80]); } catch {}
+    clearTimeout(checkClose.tm); checkClose.tm = setTimeout(() => { t.hidden = true; }, 12000);
+  }
+  document.addEventListener("visibilitychange", async () => {
+    if (document.visibilityState === "visible" && $("walk").checked && !wakeLock){ try { wakeLock = await navigator.wakeLock?.request("screen"); } catch {} }
+  });
+
+  // ---------- settings ----------
+  function openSettings(){
+    $("apiKey").value = key(); $("radius").value = radius(); $("sMsg").hidden = true; openSheet("settings");
+  }
+  $("saveSettings").addEventListener("click", () => {
+    const k = $("apiKey").value.trim();
+    if (k && !/^sk-ant-/.test(k)){ $("sMsg").hidden = false; $("sMsg").className = "msg err"; $("sMsg").textContent = "Ключ Claude начинается с sk-ant-. Проверь, всё ли скопировалось."; return; }
+    store.set("key", k || null);
+    const oldR = radius(); store.set("radius", String($("radius").value || 1000));
+    $("sMsg").hidden = false; $("sMsg").className = "msg"; $("sMsg").textContent = "Сохранено.";
+    $("keyNote").hidden = !!k || !state.items.length;
+    if (state.pos && radius() !== oldR) loadNearby(state.pos);
+    setTimeout(back, 500);
+  });
+  $("clearKey").addEventListener("click", () => { store.set("key", null); $("apiKey").value = ""; $("sMsg").hidden = false; $("sMsg").className = "msg"; $("sMsg").textContent = "Ключ удалён."; });
+
+  // ---------- wiring ----------
+  $("locate").addEventListener("click", locate);
+  $("areaStory").addEventListener("click", areaStory);
+  $("walk").addEventListener("change", e => e.target.checked ? startWalk() : stopWalk());
+  $("closeSheet").addEventListener("click", back);
+  $("closeSettings").addEventListener("click", back);
+  $("openSettings").addEventListener("click", openSettings);
+  $("cam").addEventListener("change", e => photoStory(e.target.files && e.target.files[0]));
+  $("askForm").addEventListener("submit", e => { e.preventDefault(); const v = $("askInput").value.trim(); if (!v) return; $("askInput").value = ""; ask(v); });
+
+  if (!window.isSecureContext) say("Геолокация работает только по https. Открой приложение по ссылке с https://", true);
+  // auto-start if permission already granted
+  navigator.permissions?.query({ name: "geolocation" }).then(p => { if (p.state === "granted") locate(); }).catch(() => {});
+})();
+</script>
+</body>
+</html>
