@@ -327,9 +327,9 @@ a{color:var(--accent)}
     "claude-opus-5-5": "Opus 5.5"
   };
   const LEN = {
-    short:  { words: "100–160 слов", tokens: 500, secs: "удар-крючок, одна главная история с поворотом, в конце совет, что сделать прямо сейчас" },
-    normal: { words: "220–350 слов", tokens: 1000, secs: "удар-крючок, история с поворотом, что тут творится сейчас, связь с кино, музыкой или звёздами (только реальная, иначе пропусти), в конце совет, что сделать прямо сейчас" },
-    long:   { words: "400–550 слов", tokens: 1600, secs: "удар-крючок, история с поворотом, ещё одна байка, что тут творится сейчас, связь с кино, музыкой или звёздами (только реальная, иначе пропусти), детали, которые все пропускают, в конце совет, что сделать прямо сейчас" }
+    short:  { words: "100–160 слов", tokens: 500, secs: "сильнейший факт, одна главная история с именами и развязкой, в конце совет, что сделать прямо сейчас" },
+    normal: { words: "220–350 слов", tokens: 1000, secs: "сильнейший факт, главная история с именами и развязкой, что тут творится сейчас, связь с кино, музыкой или звёздами (только реальная, иначе пропусти), в конце совет, что сделать прямо сейчас" },
+    long:   { words: "400–550 слов", tokens: 1600, secs: "сильнейший факт, главная история с именами и развязкой, ещё одна история, что тут творится сейчас, связь с кино, музыкой или звёздами (только реальная, иначе пропусти), детали, которые все пропускают, в конце совет, что сделать прямо сейчас" }
   };
   const HOOK_MODEL = "claude-haiku-4-5-20251001";
   const store = {
@@ -345,7 +345,7 @@ a{color:var(--accent)}
     pos: null, place: null, items: [], seen: new Set(JSON.parse(store.get("seen", "[]"))),
     watchId: null, lastFetchPos: null, notified: new Set(), ctl: null, turns: [],
     heading: null, sort: "near", current: null, fitted: false,
-    hooks: (() => { try { return JSON.parse(store.get("hooks", "{}")); } catch { return {}; } })(),
+    hooks: (() => { try { return JSON.parse(store.get("hooks2", "{}")); } catch { return {}; } })(),
     teasers: {}, enrichRun: 0
   };
 
@@ -662,14 +662,14 @@ a{color:var(--accent)}
     const noHook = top.filter(i => !state.hooks[i.id] && (i._full || i.desc)).slice(0, 16);
     if (noHook.length < 1) return;
     const lines = noHook.map((i, n) => `${n + 1}. ${i.title}${i.desc ? " — " + i.desc : ""}\n   ${(i._full || "").slice(0, 400)}`).join("\n");
-    const prompt = `Ты пишешь крючки для карточек в приложении-гиде. Для каждого места ниже придумай ОДНУ фразу-крючок по-русски, 50–95 символов, живой разговорной речью, как будто кричишь другу «смотри!»: шок-факт, скандал, абсурдная цифра, контраст, байка или связь с кино/звездой. Примеры тона: «Тут Брель годами жил в крошечном отеле, пока не сбежал на край света», «Этот скверик заказал лично Наполеон III, и вот зачем». Без названия места в начале, без эмодзи, без кавычек. Опирайся только на текст ниже и на то, в чём полностью уверен. Никаких выдумок: если зацепиться не за что, верни пустую строку.\n\n${lines}\n\nОтветь только JSON-массивом строк в том же порядке, ровно ${noHook.length} элементов.`;
+    const prompt = `Ты пишешь крючки для карточек в приложении-гиде. Для каждого места ниже придумай ОДНУ фразу по-русски, 50–95 символов, разговорную, с самым сильным конкретным фактом: имя, год, цифра, скандал, рекорд, судьба человека или связь с кино/звездой. Фраза должна быть понятна сама по себе: не «здесь жил один человек», а кто именно. Без названия места в начале, без эмодзи, без кавычек, без «представь» и «прикинь». Опирайся только на текст ниже и на то, в чём полностью уверен. Никаких выдумок: если конкретного факта нет, верни пустую строку.\n\n${lines}\n\nОтветь только JSON-массивом строк в том же порядке, ровно ${noHook.length} элементов.`;
     try {
       const text = await claudeStream([{ role: "user", content: prompt }], () => {}, undefined, 60 * noHook.length + 100, HOOK_MODEL);
       if (run !== state.enrichRun) return;
       const arr = JSON.parse(text.slice(text.indexOf("["), text.lastIndexOf("]") + 1));
       noHook.forEach((i, n) => { const h = String(arr[n] || "").trim(); if (h) state.hooks[i.id] = h; });
       const keys = Object.keys(state.hooks); if (keys.length > 400) for (const k of keys.slice(0, keys.length - 400)) delete state.hooks[k];
-      store.set("hooks", JSON.stringify(state.hooks));
+      store.set("hooks2", JSON.stringify(state.hooks)); store.set("hooks", null);
       refreshHooks();
     } catch {}
   }
@@ -740,11 +740,16 @@ a{color:var(--accent)}
   }
 
   // ---------- Claude ----------
-  const VOICE = `Ты — самый харизматичный друг в компании, который знает этот город вдоль и поперёк. Я читаю твой текст вслух друзьям прямо на улице, поэтому пиши ЖИВОЙ РЕЧЬЮ, как будто сам стоишь рядом и травишь байку: «Так, стоп. Видите вот это здание? Сейчас будет жёстко…», «А теперь внимание…», «И вот тут начинается самое интересное», «Короче, представьте…». Обращайся к компании на «вы» или «ребята», как рассказчик у костра.
-Максимум дофамина: первая же фраза — удар (шок-факт, скандал, абсурдная цифра, неожиданный контраст), дальше крючки и клиффхэнгеры между абзацами («но это ещё цветочки»), драма, рекорды, байки, связи с кино, сериалами, музыкой, мемами и звёздами, эмоции и реакции («представляете?!»). Предложения короткие и ритмичные, их легко читать вслух.
-Никаких сухих справок, перечислений, дат ради дат, канцелярита и списков.
-Правило номер один, важнее любого кликбейта: только правда. Не выдумывай факты, даты, цифры и цитаты. Если сомневаешься, подай как слух («говорят, что…») или пропусти.`;
-  const fmt = () => `Формат: связный рассказ-монолог короткими абзацами по 1–3 предложения, ${LEN[len()].words}. Сюжет: ${LEN[len()].secs}. Можно вставить 2–3 коротких интригующих подзаголовка через «## » для ритма (не «Из истории», а что-то вроде «## А теперь самое дикое»), но без списков и пунктов. Без эмодзи, без вступлений вроде «Конечно!», сразу с крючка.`;
+  const VOICE = `Ты рассказчик, который знает этот город вдоль и поперёк. Твой текст я читаю вслух друзьям прямо на улице, поэтому это живая устная речь: так рассказывает человек, у которого есть классная история и который хочет, чтобы все дослушали. Обращение к компании на «вы».
+
+Главное — конкретика. Каждое утверждение с именами, годами, цифрами и деталями: кто именно, когда, что сделал, чем кончилось. Запрещены размытые формулы: «один человек», «когда-то», «некий», «одна пьеса», «трудные времена», «говорят, что тут что-то было». Если дразнишь интригой, раскрой её в том же или следующем предложении: назвал загадку — сразу дай ответ с именем. Если не знаешь, кто это был, не заводи эту тему вообще.
+
+Дофамин даёт сама история, а не восклицания: неожиданный факт в первой же фразе, резкие повороты, контрасты «было — стало», абсурдные цифры, скандалы, судьбы людей, связи с кино, музыкой и звёздами. Предложения короткие и ритмичные, их легко произносить.
+
+Запрещённые слова-паразиты и штампы: «Так, стоп», «А теперь внимание», «Представляете?!», «И вот тут начинается самое интересное», «Короче», «Ребята», «Друзья», «Прикиньте», «Сейчас будет жёстко», «Как в кино», «Вы не поверите». Никаких риторических вопросов вместо фактов, никакого канцелярита, никаких списков.
+
+Правда важнее эффектности: не выдумывай факты, даты, цифры и цитаты. Если материала мало, лучше короче, но точно.`;
+  const fmt = () => `Формат: связный устный рассказ короткими абзацами по 1–3 предложения, ${LEN[len()].words}. Сюжет: ${LEN[len()].secs}. Первое предложение — самый сильный конкретный факт с именем или цифрой, без разгона. Можно 1–3 коротких подзаголовка через «## », которые обещают конкретное (например, имя или событие), а не общие «самое дикое». Без списков, без эмодзи, без вступлений.`;
   function wherePhrase(){
     const pl = state.place; if (!pl) return state.pos ? `координаты ${state.pos.lat.toFixed(5)}, ${state.pos.lon.toFixed(5)}` : "";
     return [pl.street, pl.hood, pl.city, pl.country].filter(Boolean).join(", ");
@@ -787,7 +792,7 @@ a{color:var(--accent)}
   const claudeAppLink = p => "https://claude.ai/new?q=" + enc(p);
 
   // story cache: saves tokens on repeat opens
-  const cacheKey = id => `story.${model()}.${len()}.${id}`;
+  const cacheKey = id => `story2.${model()}.${len()}.${id}`;
   function cacheGet(id){ return store.get(cacheKey(id)); }
   function cachePut(id, text){
     store.set(cacheKey(id), text);
@@ -871,6 +876,26 @@ a{color:var(--accent)}
     }
   }
 
+  async function wikiFull(it){
+    const get = async (lang, title) => {
+      try {
+        const j = await (await fetch(`https://${lang}.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=extracts&explaintext=1&redirects=1&titles=${enc(title)}`)).json();
+        let t = (Object.values(j.query?.pages || {})[0]?.extract || "");
+        t = t.split(/\n==\s*(Примечания|Литература|Ссылки|См\. также|Источники|Notes|References|See also|External links|Further reading|Bibliography)\s*==/)[0];
+        return t.replace(/\n{3,}/g, "\n\n").trim();
+      } catch { return ""; }
+    };
+    if (!key()) return "";
+    let text = await get(it.lang, it.title);
+    if (text.length < 1500 && it.lang !== "en"){
+      try {
+        const j = await (await fetch(`https://${it.lang}.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=langlinks&lllang=en&titles=${enc(it.title)}`)).json();
+        const en = Object.values(j.query?.pages || {})[0]?.langlinks?.[0]?.["*"];
+        if (en){ const e = await get("en", en); if (e) text += (text ? "\n\n[Английская Википедия]\n" : "") + e; }
+      } catch {}
+    }
+    return text;
+  }
   async function wikiExtract(it){
     const u = `https://${it.lang}.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=extracts&explaintext=1&exintro=1&redirects=1&titles=${enc(it.title)}`;
     try { const j = await (await fetch(u)).json(); return (Object.values(j.query?.pages || {})[0]?.extract || "").trim(); } catch { return ""; }
@@ -901,7 +926,10 @@ a{color:var(--accent)}
       `<a class="btn btn-ghost" href="https://www.google.com/search?tbm=isch&q=${enc(it.title)}" target="_blank" rel="noopener">Ещё фото</a>` +
       `<a class="btn btn-ghost" href="${esc(it.url)}" target="_blank" rel="noopener">Википедия</a>`;
     const where = `Я стою в ${fmtDist(it.dist)} от этого места, оно от меня ${dir}. Я сейчас: ${wherePhrase()}.`;
-    const prompt = `${VOICE}\n\nМесто: «${it.title}»${it.desc ? " (" + it.desc + ")" : ""}. ${where}\nВступление статьи из Википедии как опора (добавляй и то, что знаешь сам, если уверен):\n"""${extract.slice(0, 2500)}"""\n\nРасскажи мне про это место. ${fmt()}`;
+    const full = await wikiFull(it);
+    if (signal.aborted) return;
+    const material = (full.length > extract.length ? full : extract).slice(0, 7000);
+    const prompt = `${VOICE}\n\nМесто: «${it.title}»${it.desc ? " (" + it.desc + ")" : ""}. ${where}\nСтатья из Википедии как главный источник фактов (выбери из неё самые яркие истории с именами и цифрами; добавляй своё, только если уверен):\n"""${material}"""\n\nРасскажи нам про это место. ${fmt()}`;
     runStory({
       id: it.id, prompt,
       fallbackHtml: extract ? md(extract.split("\n").slice(0, 4).join("\n\n")) : `<p class="wiki">В Википедии про это место почти ничего нет.</p>`,
