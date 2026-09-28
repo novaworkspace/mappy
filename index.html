@@ -172,6 +172,18 @@ a{color:var(--accent)}
 .prose li{margin-bottom:4px}
 .prose > :first-child{margin-top:0}
 .prose > :last-child{margin-bottom:0}
+.src{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 4px;margin-left:3px;border:0;border-radius:6px;background:var(--accent-soft);color:var(--accent);font:600 11px/1 var(--mono);vertical-align:3px;cursor:pointer}
+.src.own{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.sources{display:grid;gap:4px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:13px}
+.sources .lbl{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.sources a{font-weight:600;text-decoration:none}
+.sources .hint{color:var(--muted);font-size:12px}
+.srcpanel{position:fixed;left:12px;right:12px;bottom:calc(var(--safe-b) + 84px);z-index:6;max-width:620px;margin:0 auto;max-height:55vh;overflow-y:auto;background:var(--surface);border-radius:18px;padding:14px 16px;box-shadow:0 18px 50px -12px rgba(0,0,0,.45);display:grid;gap:8px;font-size:14.5px;border:1px solid var(--line)}
+.srcpanel .sp-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.srcpanel .sp-x{border:0;background:var(--surface-2);width:30px;height:30px;border-radius:10px;cursor:pointer;flex:none}
+.srcpanel .sp-sec{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.srcpanel blockquote{margin:0;padding:8px 12px;border-left:3px solid var(--accent);background:var(--surface-2);border-radius:0 10px 10px 0;line-height:1.5}
+.srcpanel p{margin:0;color:var(--muted)}
 .caret::after{content:"▍";color:var(--accent);animation:blink 1s steps(1) infinite}
 @keyframes blink{50%{opacity:0}}
 .wiki{font-size:15px;color:var(--muted);margin:0}
@@ -281,6 +293,8 @@ a{color:var(--accent)}
     <div class="tip" id="pTip" hidden></div>
     <div class="story">
       <div class="prose" id="pStory"></div>
+      <button class="btn btn-hi" id="moreBtn" type="button" hidden style="margin-top:12px;width:100%">Рассказ оборвался. Продолжить</button>
+      <div class="sources" id="pSources" hidden></div>
       <div class="story-foot" id="pFoot" hidden><span id="pModel"></span><button class="linkbtn" id="retell" type="button">Рассказать заново</button></div>
       <div id="pQa"></div>
       <form class="ask" id="askForm" hidden autocomplete="off" style="margin-top:14px">
@@ -290,6 +304,7 @@ a{color:var(--accent)}
     </div>
     <div class="row-actions" id="pActions"></div>
   </div>
+  <div class="srcpanel" id="srcPanel" hidden role="dialog" aria-label="Источник факта"></div>
   <div class="sheet-bottom">
     <button class="btn btn-back" id="closeSheet" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg> Назад</button>
     <button class="btn btn-ghost btn-speak" id="speak" type="button" aria-pressed="false" hidden>
@@ -360,9 +375,9 @@ a{color:var(--accent)}
     "claude-opus-5-5": "Opus 5.5"
   };
   const LEN = {
-    short:  { words: "100–160 слов", tokens: 500, secs: "сильнейший факт, одна главная история с именами и развязкой, в конце совет, что сделать прямо сейчас" },
-    normal: { words: "220–350 слов", tokens: 1000, secs: "сильнейший факт, главная история с именами и развязкой, что тут творится сейчас, связь с кино, музыкой или звёздами (только реальная, иначе пропусти), в конце совет, что сделать прямо сейчас" },
-    long:   { words: "400–550 слов", tokens: 1600, secs: "сильнейший факт, главная история с именами и развязкой, ещё одна история, что тут творится сейчас, связь с кино, музыкой или звёздами (только реальная, иначе пропусти), детали, которые все пропускают, в конце совет, что сделать прямо сейчас" }
+    short:  { words: "100–160 слов", tokens: 1100, secs: "сильнейший факт, одна главная история с именами и развязкой, в конце совет, что сделать прямо сейчас" },
+    normal: { words: "220–350 слов", tokens: 2200, secs: "сильнейший факт, главная история с именами и развязкой, что тут творится сейчас, связь с кино, музыкой или звёздами (только реальная, иначе пропусти), в конце совет, что сделать прямо сейчас" },
+    long:   { words: "400–550 слов", tokens: 3400, secs: "сильнейший факт, главная история с именами и развязкой, ещё одна история, что тут творится сейчас, связь с кино, музыкой или звёздами (только реальная, иначе пропусти), детали, которые все пропускают, в конце совет, что сделать прямо сейчас" }
   };
   const HOOK_MODEL = "claude-haiku-4-5-20251001";
   const FOOD_MODEL = "claude-sonnet-5"; // better restaurant knowledge; one small call per area
@@ -403,10 +418,20 @@ a{color:var(--accent)}
   const enc = encodeURIComponent;
   const dots = '<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>';
 
-  function md(src){
+  function citeChips(list){
+    return list.split(/\s*,\s*/).map(n => n === "*"
+      ? `<button type="button" class="src own" data-n="*" aria-label="Факт не из статьи">?</button>`
+      : `<button type="button" class="src" data-n="${n}" aria-label="Источник ${n}">${n}</button>`).join("");
+  }
+  function md(src, cite){
     const lines = src.replace(/\r/g, "").split("\n");
     let out = "", list = false, para = [];
-    const inline = t => esc(t).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/(^|[^*])\*(?!\s)(.+?)\*/g, "$1<em>$2</em>");
+    const inline = t => {
+      let h = esc(t);
+      if (cite) h = h.replace(/\s?\[((?:\d{1,3}|\*)(?:\s*,\s*(?:\d{1,3}|\*))*)\]/g, (_, l) => citeChips(l));
+      else h = h.replace(/\s?\[(?:\d{1,3}|\*)(?:\s*,\s*(?:\d{1,3}|\*))*\]/g, "");
+      return h.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/(^|[^*>])\*(?![\s"])(.+?)\*/g, "$1<em>$2</em>");
+    };
     const flush = () => { if (para.length){ out += "<p>" + inline(para.join(" ")) + "</p>"; para = []; } };
     const end = () => { if (list){ out += "</ul>"; list = false; } };
     for (const raw of lines){
@@ -692,8 +717,8 @@ a{color:var(--accent)}
     const prompt = `Вот реальные заведения рядом со мной (${wherePhrase()}), по данным OpenStreetMap:\n${lines}\n\nВыбери из списка до 8 мест, которые ты знаешь как особенно вкусные: легендарные, с наградами (Michelin, Bib Gourmand, лучший багет или круассан города и т.п.), из гидов и громких обзоров, или известные как любимые у местных. Не угадывай по названию или кухне: если конкретное место тебе неизвестно, не бери его. Если не знаешь ни одного, верни пустой массив.\nДля каждого — фраза по-русски 50–95 символов, живая и конкретная: чем знамениты и что заказать.\nОтветь только JSON: [{"n": номер, "h": "фраза"}]`;
     try {
       let text;
-      try { text = await claudeStream([{ role: "user", content: prompt }], () => {}, undefined, 800, FOOD_MODEL); }
-      catch (e){ if (e.status === 404) text = await claudeStream([{ role: "user", content: prompt }], () => {}, undefined, 800, HOOK_MODEL); else throw e; }
+      try { text = await claudeStream([{ role: "user", content: prompt }], () => {}, undefined, 1500, FOOD_MODEL); }
+      catch (e){ if (e.status === 404) text = await claudeStream([{ role: "user", content: prompt }], () => {}, undefined, 1500, HOOK_MODEL); else throw e; }
       const arr = JSON.parse(text.slice(text.indexOf("["), text.lastIndexOf("]") + 1));
       const picks = (Array.isArray(arr) ? arr : []).map(p => ({ id: state.foodCands[Number(p.n) - 1]?.id, h: String(p.h || "").trim() })).filter(p => p.id && p.h);
       store.set(areaKey, JSON.stringify(picks));
@@ -836,7 +861,7 @@ a{color:var(--accent)}
     const topicList = Object.keys(TOPICS).join(", ");
     const prompt = `Ты размечаешь места для приложения-гида. Для каждого места ниже верни объект:\n- "h": ОДНА фраза-крючок по-русски, 50–95 символов, разговорная, с интригой и самым сильным конкретным фактом (имя, год, цифра, скандал, рекорд, судьба человека, связь с кино, модой или звездой). Фраза понятна сама по себе: не «здесь жил один человек», а кто именно. Лучше всего факт, который цепляет темы: ${interestsText()}. Без названия места в начале, без эмодзи, без кавычек. Если конкретного факта нет, пустая строка.\n- "t": массив тем из списка [${topicList}, photo], к которым у места есть РЕАЛЬНАЯ связь (0–3 темы). "photo" ставь, только если это правда классный фон для Инстаграма и селфи: эффектный фасад, вид, интерьер, узнаваемый ракурс, стрит-арт.\n- "p": если есть "photo", совет для инсты и селфи до 100 символов: где встать, какой ракурс, что попадёт в кадр, какое время (золотой час, утро без толп), иначе пустая строка.\nОпирайся только на текст ниже и на то, в чём полностью уверен. Никаких выдумок.\n\n${lines}\n\nОтветь только JSON-массивом из ровно ${noHook.length} объектов в том же порядке.`;
     try {
-      const text = await claudeStream([{ role: "user", content: prompt }], () => {}, undefined, 110 * noHook.length + 150, HOOK_MODEL);
+      const text = await claudeStream([{ role: "user", content: prompt }], () => {}, undefined, 160 * noHook.length + 200, HOOK_MODEL);
       if (run !== state.enrichRun) return;
       const arr = JSON.parse(text.slice(text.indexOf("["), text.lastIndexOf("]") + 1));
       noHook.forEach((i, n) => {
@@ -932,7 +957,9 @@ a{color:var(--accent)}
     const pl = state.place; if (!pl) return state.pos ? `координаты ${state.pos.lat.toFixed(5)}, ${state.pos.lon.toFixed(5)}` : "";
     return [pl.street, pl.hood, pl.city, pl.country].filter(Boolean).join(", ");
   }
+  let lastStop = null;
   async function claudeStream(messages, onText, signal, maxTokens, modelOverride){
+    lastStop = null;
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST", signal,
       headers: { "content-type": "application/json", "x-api-key": key(), "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
@@ -953,6 +980,7 @@ a{color:var(--accent)}
         if (!line.startsWith("data:")) continue;
         let ev; try { ev = JSON.parse(line.slice(5)); } catch { continue; }
         if (ev.type === "content_block_delta" && ev.delta?.type === "text_delta"){ text += ev.delta.text; onText(text); }
+        if (ev.type === "message_delta" && ev.delta?.stop_reason) lastStop = ev.delta.stop_reason;
         if (ev.type === "error") throw new Error(ev.error?.message || "stream error");
       }
     }
@@ -970,10 +998,10 @@ a{color:var(--accent)}
   const claudeAppLink = p => "https://claude.ai/new?q=" + enc(p);
 
   // story cache: saves tokens on repeat opens
-  const cacheKey = id => `story2.${model()}.${len()}.${id}`;
-  function cacheGet(id){ return store.get(cacheKey(id)); }
+  const cacheKey = id => `story3.${model()}.${len()}.${id}`;
+  function cacheGet(id){ try { return JSON.parse(store.get(cacheKey(id)) || "null"); } catch { return null; } }
   function cachePut(id, text){
-    store.set(cacheKey(id), text);
+    store.set(cacheKey(id), JSON.stringify(text));
     try {
       const idx = JSON.parse(store.get("storyIdx", "[]")); idx.push(cacheKey(id));
       while (idx.length > 150) store.set(idx.shift(), null);
@@ -993,7 +1021,8 @@ a{color:var(--accent)}
   function speakStory(){
     if (!tts) return;
     if ($("speak").getAttribute("aria-pressed") === "true"){ stopSpeak(); return; }
-    const txt = [$("pTitle").textContent, $("pHook").hidden ? "" : $("pHook").textContent, $("pStory").innerText, $("pQa").innerText].filter(Boolean).join(".\n");
+    const clean = el => { const c = el.cloneNode(true); c.querySelectorAll(".src").forEach(b => b.remove()); return c.innerText; };
+    const txt = [$("pTitle").textContent, $("pHook").hidden ? "" : $("pHook").textContent, clean($("pStory")), clean($("pQa"))].filter(Boolean).join(".\n");
     const parts = txt.replace(/\s+\n/g, "\n").match(/[^.!?…\n]+[.!?…]*\s*/g) || [txt];
     tts.cancel();
     const v = ruVoice();
@@ -1014,15 +1043,17 @@ a{color:var(--accent)}
     state.ctl?.abort(); state.ctl = new AbortController(); state.turns = [];
     const im = $("pImg");
     if (img){ im.src = img; im.hidden = false; } else { im.hidden = true; im.removeAttribute("src"); }
-    $("pTitle").textContent = title; $("pMeta").innerHTML = meta || ""; $("pHook").hidden = true; $("pTip").hidden = true;
+    $("pTitle").textContent = title; $("pMeta").innerHTML = meta || ""; $("pHook").hidden = true; $("pTip").hidden = true; $("srcPanel").hidden = true; state.cite = null; renderSources(); $("moreBtn").hidden = true;
     stopSpeak(); $("speak").hidden = true;
     $("pQa").innerHTML = ""; $("askForm").hidden = true; $("pFoot").hidden = true; $("pActions").innerHTML = "";
     if ($("sheet").hidden) openSheet("sheet");
     $("sheet").scrollTop = 0;
     return state.ctl.signal;
   }
-  async function runStory({ id, prompt, fallbackHtml, appPrompt, maxTokens, force }){
+  async function runStory({ id, prompt, fallbackHtml, appPrompt, maxTokens, force, cite }){
     const pr = $("pStory");
+    state.cite = cite || null;
+    renderSources();
     if (!key()){
       pr.innerHTML = fallbackHtml || `<p class="wiki">Расскажет Claude: добавь ключ в настройках или открой вопрос в приложении Claude.</p>`;
       $("speak").hidden = !tts || !fallbackHtml;
@@ -1031,22 +1062,40 @@ a{color:var(--accent)}
       $("pActions").prepend(a); return;
     }
     const cached = id && !force ? cacheGet(id) : null;
-    const finish = text => {
+    let story = "";
+    const show = t => { pr.innerHTML = md(t, !!state.cite); };
+    const finish = (text, truncated) => {
+      story = text;
       pr.classList.remove("caret");
       state.turns = [{ role: "user", content: prompt }, { role: "assistant", content: text }];
       $("askForm").hidden = false; $("pFoot").hidden = false;
       $("pModel").textContent = MODELS[model()] + (cached ? " · из памяти" : "");
       $("speak").hidden = !tts;
-      $("retell").onclick = () => { $("pQa").innerHTML = ""; runStory({ id, prompt, fallbackHtml, appPrompt, maxTokens, force: true }); };
+      $("retell").onclick = () => { $("pQa").innerHTML = ""; runStory({ id, prompt, fallbackHtml, appPrompt, maxTokens, force: true, cite }); };
+      const more = $("moreBtn");
+      more.hidden = !truncated;
+      more.onclick = async () => {
+        more.hidden = true;
+        state.ctl?.abort(); state.ctl = new AbortController();
+        const base = story.replace(/\s+$/, "");
+        try {
+          const add = await claudeStream([{ role: "user", content: prompt }, { role: "assistant", content: base }, { role: "user", content: "Продолжи ровно с того места, где оборвался текст, без повторов и без вступлений. Сохрани стиль и ссылки на источники." }],
+            t => { show(base + (/[\s—-]$/.test(base) ? "" : " ") + t); pr.classList.add("caret"); }, state.ctl.signal, maxTokens || LEN[len()].tokens);
+          const full = base + (/[\s—-]$/.test(base) ? "" : " ") + add;
+          show(full); if (id) cachePut(id, { t: full, c: cite || null });
+          finish(full, lastStop === "max_tokens");
+        } catch (e){ pr.classList.remove("caret"); const m = apiErr(e); if (m) pr.insertAdjacentHTML("beforeend", `<p class="wiki" style="color:var(--warn)">${m}</p>`); more.hidden = false; }
+      };
     };
-    if (cached){ pr.innerHTML = md(cached); finish(cached); return; }
+    if (cached && cached.t){ state.cite = cached.c || state.cite; renderSources(); show(cached.t); finish(cached.t, false); return; }
     state.ctl?.abort(); state.ctl = new AbortController();
     pr.innerHTML = `<p class="wiki">${dots} Вспоминаю всё самое интересное</p>`;
-    $("pFoot").hidden = true; $("askForm").hidden = true;
+    $("pFoot").hidden = true; $("askForm").hidden = true; $("moreBtn").hidden = true;
     try {
-      const text = await claudeStream([{ role: "user", content: prompt }], t => { pr.innerHTML = md(t); pr.classList.add("caret"); }, state.ctl.signal, maxTokens);
-      if (id) cachePut(id, text);
-      finish(text);
+      const text = await claudeStream([{ role: "user", content: prompt }], t => { show(t); pr.classList.add("caret"); }, state.ctl.signal, maxTokens);
+      const truncated = lastStop === "max_tokens";
+      if (id) cachePut(id, { t: text, c: cite || null });
+      finish(text, truncated);
     } catch (e){
       pr.classList.remove("caret");
       const m = apiErr(e); if (!m) return;
@@ -1054,25 +1103,74 @@ a{color:var(--accent)}
     }
   }
 
+  // ---------- sources ----------
+  function renderSources(){
+    const box = $("pSources");
+    const c = state.cite;
+    if (!c || !c.docs?.length){ box.hidden = true; box.innerHTML = ""; return; }
+    box.hidden = false;
+    box.innerHTML = `<span class="lbl">Источники</span>` + c.docs.map(d => `<a href="${esc(d.url)}" target="_blank" rel="noopener">Википедия${d.lang !== "ru" ? " (" + esc(d.lang) + ")" : ""}: ${esc(d.title)}</a>`).join("") +
+      `<span class="hint">Цифры в тексте ведут на абзац статьи, откуда взят факт. «?» значит, что факта в статье нет и гид добавил его из своих знаний.</span>`;
+  }
+  function fragmentUrl(url, text){
+    const words = text.replace(/[«»"“”()\[\]]/g, " ").split(/\s+/).filter(Boolean).slice(0, 7).join(" ").replace(/[.,;:!?—–-]+$/, "");
+    const encF = w => encodeURIComponent(w).replace(/-/g, "%2D");
+    return url.split("#")[0] + "#:~:text=" + encF(words);
+  }
+  function showSource(btn){
+    const panel = $("srcPanel"), c = state.cite;
+    const n = btn.dataset.n;
+    if (n === "*"){
+      const sentence = (btn.closest("p,li")?.innerText || "").replace(/\?/g, "").trim().slice(0, 160);
+      panel.innerHTML = `<div class="sp-head"><b>Не из статьи</b><button type="button" class="sp-x" aria-label="Закрыть">✕</button></div>
+        <p>Этого факта нет в статье Википедии, гид добавил его из своих знаний. Такое бывает верным, но лучше проверить.</p>
+        <a class="btn btn-ghost" href="https://www.google.com/search?q=${enc(sentence)}" target="_blank" rel="noopener">Проверить в поиске</a>`;
+    } else {
+      const para = c?.paras?.[Number(n) - 1];
+      if (!para) return;
+      const doc = c.docs[para.d] || c.docs[0];
+      panel.innerHTML = `<div class="sp-head"><b>Источник ${esc(n)} · Википедия${doc.lang !== "ru" ? " (" + esc(doc.lang) + ")" : ""}</b><button type="button" class="sp-x" aria-label="Закрыть">✕</button></div>
+        ${para.h ? `<span class="sp-sec">${esc(para.h)}</span>` : ""}
+        <blockquote>${esc(para.t.length > 700 ? para.t.slice(0, 700) + "…" : para.t)}</blockquote>
+        <a class="btn btn-ghost" href="${esc(fragmentUrl(doc.url, para.t))}" target="_blank" rel="noopener">Открыть это место в статье</a>`;
+    }
+    panel.hidden = false;
+    panel.querySelector(".sp-x").onclick = () => { panel.hidden = true; };
+  }
+
   async function wikiFull(it){
     const get = async (lang, title) => {
       try {
-        const j = await (await fetch(`https://${lang}.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=extracts&explaintext=1&redirects=1&titles=${enc(title)}`)).json();
-        let t = (Object.values(j.query?.pages || {})[0]?.extract || "");
-        t = t.split(/\n==\s*(Примечания|Литература|Ссылки|См\. также|Источники|Notes|References|See also|External links|Further reading|Bibliography)\s*==/)[0];
-        return t.replace(/\n{3,}/g, "\n\n").trim();
-      } catch { return ""; }
+        const j = await (await fetch(`https://${lang}.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=extracts%7Cinfo&inprop=url&explaintext=1&redirects=1&titles=${enc(title)}`)).json();
+        const p = Object.values(j.query?.pages || {})[0] || {};
+        let t = (p.extract || "");
+        t = t.split(/\n==\s*(Примечания|Литература|Ссылки|См\. также|Источники|Notes|References|See also|External links|Further reading|Bibliography|Галерея|Gallery)\s*==/)[0];
+        return { text: t.trim(), url: p.fullurl || `https://${lang}.wikipedia.org/wiki/${enc(title)}`, title: p.title || title, lang };
+      } catch { return null; }
     };
-    if (!key()) return "";
-    let text = await get(it.lang, it.title);
-    if (text.length < 1500 && it.lang !== "en"){
+    if (!key()) return null;
+    const docs = [];
+    const main = await get(it.lang, it.title); if (main?.text) docs.push(main);
+    if ((main?.text.length || 0) < 1500 && it.lang !== "en"){
       try {
         const j = await (await fetch(`https://${it.lang}.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=langlinks&lllang=en&titles=${enc(it.title)}`)).json();
         const en = Object.values(j.query?.pages || {})[0]?.langlinks?.[0]?.["*"];
-        if (en){ const e = await get("en", en); if (e) text += (text ? "\n\n[Английская Википедия]\n" : "") + e; }
+        if (en){ const e = await get("en", en); if (e?.text) docs.push(e); }
       } catch {}
     }
-    return text;
+    // number paragraphs so the story can cite them
+    const paras = []; let budget = 7500;
+    docs.forEach((d, di) => {
+      let head = "";
+      for (const raw of d.text.split(/\n+/)){
+        const line = raw.trim(); if (!line) continue;
+        const hm = line.match(/^=+\s*(.+?)\s*=+$/); if (hm){ head = hm[1]; continue; }
+        if (line.length < 40 || budget <= 0) continue;
+        const t = line.length > 1200 ? line.slice(0, 1200) + "…" : line;
+        budget -= t.length; paras.push({ d: di, h: head, t });
+      }
+    });
+    return paras.length ? { docs: docs.map(d => ({ url: d.url, title: d.title, lang: d.lang })), paras } : null;
   }
   async function wikiExtract(it){
     const u = `https://${it.lang}.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=extracts&explaintext=1&exintro=1&redirects=1&titles=${enc(it.title)}`;
@@ -1107,15 +1205,17 @@ a{color:var(--accent)}
       `<a class="btn btn-ghost" href="https://www.google.com/search?tbm=isch&q=${enc(it.title)}" target="_blank" rel="noopener">Ещё фото</a>` +
       `<a class="btn btn-ghost" href="${esc(it.url)}" target="_blank" rel="noopener">Википедия</a>`;
     const where = `Я стою в ${fmtDist(it.dist)} от этого места, оно от меня ${dir}. Я сейчас: ${wherePhrase()}.`;
-    const full = await wikiFull(it);
+    let cite = await wikiFull(it);
     if (signal.aborted) return;
-    const material = (full.length > extract.length ? full : extract).slice(0, 7000);
+    if (!cite && extract) cite = { docs: [{ url: it.url, title: it.title, lang: it.lang }], paras: extract.split(/\n+/).filter(l => l.trim().length > 30).map(t => ({ d: 0, h: "", t: t.trim() })) };
+    const material = cite ? cite.paras.map((p, i) => `[${i + 1}]${p.h ? " (" + p.h + ")" : ""} ${p.t}`).join("\n") : "";
     const photoAsk = tagsOf(it).has("photo") ? " В самом конце одной-двумя фразами дай совет для Инстаграма и селфи: где встать, какой ракурс, в какое время меньше людей и лучше свет." : "";
-    const prompt = `${VOICE}\n\nМесто: «${it.title}»${it.desc ? " (" + it.desc + ")" : ""}. ${where}\nСтатья из Википедии как главный источник фактов (выбери из неё самые яркие истории с именами и цифрами; добавляй своё, только если уверен):\n"""${material}"""\n\nРасскажи нам про это место. ${fmt()}${photoAsk}`;
+    const prompt = `${VOICE}\n\nМесто: «${it.title}»${it.desc ? " (" + it.desc + ")" : ""}. ${where}\nСтатья из Википедии как главный источник фактов, разбитая на пронумерованные абзацы (выбери из неё самые яркие истории с именами и цифрами; добавляй своё, только если уверен):\n"""${material}"""\n\nРасскажи нам про это место. ${fmt()}${photoAsk}\nИсточники: после каждого предложения с фактом ставь номер абзаца, откуда он взят, в квадратных скобках, например [3] или [3,7]. Если факт не из этих абзацев, а из твоих знаний, ставь [*]. Ссылки ставь в конце предложения, до точки не нужно. Номера должны точно соответствовать абзацам.`;
     runStory({
       id: it.id, prompt,
       fallbackHtml: extract ? md(extract.split("\n").slice(0, 4).join("\n\n")) : `<p class="wiki">В Википедии про это место почти ничего нет.</p>`,
-      appPrompt: `${VOICE}\n\nЯ стою рядом с местом «${it.title}» (${wherePhrase()}). Расскажи мне про него. ${fmt()}`
+      appPrompt: `${VOICE}\n\nЯ стою рядом с местом «${it.title}» (${wherePhrase()}). Расскажи мне про него. ${fmt()}`,
+      cite
     });
   }
 
@@ -1139,7 +1239,7 @@ a{color:var(--accent)}
       prompt = `${VOICE}\n\nТочка «${it.title}» (${facts}), ${city}. ${where}\nЭто ${it.desc || "точка для фото"}. Расскажи, что отсюда видно или что это за объект, если знаешь его историю, и как снять кадр для Инстаграма и селфи: где встать, какой ракурс, что будет за спиной, в какое время лучший свет и меньше людей. Если не знаешь конкретно эту точку, скажи честно и дай совет по съёмке без выдумок. ${LEN.short.words}, короткие абзацы, без списков, без эмодзи.`;
     }
     runStory({
-      id: it.id, prompt, maxTokens: 600,
+      id: it.id, prompt, maxTokens: 1300,
       fallbackHtml: `<p class="wiki">${esc(state.meta[it.id]?.h || it.desc || "")}</p>`,
       appPrompt: prompt
     });
@@ -1179,7 +1279,7 @@ a{color:var(--accent)}
     const msgs = [...state.turns, { role: "user", content: q + "\n\n(Отвечай в том же стиле, коротко: 50–150 слов. Не выдумывай факты.)" }];
     state.ctl?.abort(); state.ctl = new AbortController();
     try {
-      const t = await claudeStream(msgs.length > 9 ? [msgs[0], ...msgs.slice(-8)] : msgs, x => { out.innerHTML = md(x); out.classList.add("caret"); }, state.ctl.signal, 600);
+      const t = await claudeStream(msgs.length > 9 ? [msgs[0], ...msgs.slice(-8)] : msgs, x => { out.innerHTML = md(x, !!state.cite); out.classList.add("caret"); }, state.ctl.signal, 1200);
       state.turns.push({ role: "user", content: q }, { role: "assistant", content: t });
     } catch (e){ const m = apiErr(e); if (m) out.innerHTML = `<p class="wiki" style="color:var(--warn)">${m}</p>`; }
     out.classList.remove("caret");
@@ -1308,6 +1408,7 @@ a{color:var(--accent)}
   $("walk").addEventListener("change", e => e.target.checked ? startWalk() : stopWalk());
   $("closeSheet").addEventListener("click", back);
   $("speak").addEventListener("click", speakStory);
+  $("sheet").addEventListener("click", e => { const b = e.target.closest(".src"); if (b){ e.preventDefault(); showSource(b); } });
   $("closeSettings").addEventListener("click", back);
   $("openSettings").addEventListener("click", openSettings);
   $("cam").addEventListener("change", e => photoStory(e.target.files && e.target.files[0]));
