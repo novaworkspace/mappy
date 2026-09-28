@@ -72,6 +72,35 @@ a{color:var(--accent)}
 .fab{width:44px;height:44px;border-radius:14px;border:0;background:var(--surface);box-shadow:var(--shadow);display:grid;place-items:center;cursor:pointer;padding:0}
 .fab svg{width:21px;height:21px}
 .fab.on{background:var(--accent);color:var(--accent-ink)}
+.search-here{position:absolute;z-index:500;left:50%;bottom:16px;transform:translateX(-50%);padding:10px 16px;box-shadow:var(--shadow);font-size:14px}
+.searchbox{position:absolute;z-index:700;inset:10px 10px auto 10px;background:var(--surface);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;max-height:calc(100% - 20px);display:flex;flex-direction:column}
+.sb-row{display:flex;align-items:center;gap:8px;padding:6px 6px 6px 12px;border-bottom:1px solid var(--line)}
+.sb-row > svg{width:18px;height:18px;flex:none;color:var(--muted)}
+.sb-row input{flex:1;min-width:0;border:0;background:transparent;padding:10px 0;font-size:16px;outline:none}
+.sb-x{border:0;background:var(--surface-2);width:34px;height:34px;border-radius:10px;cursor:pointer;flex:none}
+.sb-res{overflow-y:auto}
+.sb-item{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;width:100%;text-align:left;border:0;background:transparent;padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--line)}
+.sb-item:last-child{border-bottom:0}
+.sb-item svg{width:18px;height:18px;color:var(--muted)}
+.sb-item b{display:block;font-size:15px;line-height:1.3}
+.sb-item span{display:block;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-item .del{border:0;background:none;color:var(--muted);font-size:14px;padding:6px;cursor:pointer}
+.sb-lbl{padding:10px 12px 4px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.sb-empty{padding:12px;font-size:14px;color:var(--muted)}
+.explore-bar{display:flex;align-items:center;gap:8px;background:var(--hi);color:var(--hi-ink);border-radius:16px;padding:10px 10px 10px 14px}
+.explore-bar .eb-tx{flex:1;min-width:0;display:grid}
+.explore-bar .eyebrow{color:inherit;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.explore-bar b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.explore-bar .btn{padding:10px 12px;font-size:14px;flex:none}
+.explore-bar .btn-ghost{background:rgba(255,255,255,.55);border-color:transparent;color:var(--hi-ink)}
+.explore-bar .btn-ghost[aria-pressed="true"] svg{fill:currentColor}
+.explore-bar .btn-ghost svg{width:16px;height:16px}
+.xpin{width:34px;height:44px;pointer-events:none}
+.tappin{display:grid;justify-items:center;gap:4px;transform:translateY(-4px)}
+.tappin button{border:0;border-radius:12px;background:var(--ink);color:var(--bg);font:600 13px var(--body);padding:8px 12px;box-shadow:var(--shadow);cursor:pointer;white-space:nowrap}
+.tappin i{width:14px;height:14px;border-radius:50%;background:var(--hi);border:3px solid var(--ink)}
+.map-empty .btn-ghost{background:var(--surface)}
+.fab[disabled]{opacity:.4}
 .heading-badge{position:absolute;z-index:500;left:10px;bottom:22px;font-family:var(--mono);font-size:12px;background:var(--surface);border-radius:999px;padding:4px 10px;box-shadow:var(--shadow);font-variant-numeric:tabular-nums}
 
 /* markers */
@@ -239,11 +268,13 @@ a{color:var(--accent)}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
         <span id="locateText">Найти меня</span>
       </button>
+      <button class="btn btn-ghost" id="searchEmpty" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg> Или найти место</button>
     </div>
     <div class="overlay-tl" id="whereBox" hidden>
       <div class="where-chip"><b id="whereStreet"></b><span id="whereHood"></span></div>
     </div>
     <div class="overlay-r" id="mapBtns" hidden>
+      <button class="fab" id="searchBtn" type="button" aria-label="Найти место"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
       <button class="fab" id="recenter" type="button" aria-label="Обновить и показать меня">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
       </button>
@@ -252,12 +283,29 @@ a{color:var(--accent)}
       </button>
     </div>
     <span class="heading-badge" id="headingBadge" hidden></span>
+    <button class="btn btn-main search-here" id="searchHere" type="button" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg> Искать здесь</button>
+    <div class="searchbox" id="searchBox" hidden>
+      <form class="sb-row" id="searchForm" autocomplete="off">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+        <input id="q" type="text" placeholder="Адрес, место или район" enterkeyhint="search" aria-label="Поиск места">
+        <button type="button" class="sb-x" id="searchClose" aria-label="Закрыть">✕</button>
+      </form>
+      <div class="sb-res" id="qRes"></div>
+    </div>
   </section>
+
+  <div class="explore-bar" id="exploreBar" hidden>
+    <div class="eb-tx"><span class="eyebrow">Разведка на будущее</span><b id="exploreName">Точка на карте</b></div>
+    <button class="btn btn-ghost" id="saveSpot" type="button" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg><span>Сохранить</span>
+    </button>
+    <button class="btn btn-main" id="backToMe" type="button">Ко мне</button>
+  </div>
 
   <div class="actions" id="actions" hidden>
     <button class="btn btn-hi" id="lookAround" type="button">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
-      Оглядеться
+      <span id="lookLabel">Оглядеться</span>
     </button>
     <button class="btn btn-ghost" id="areaStory" type="button">Про район</button>
   </div>
@@ -410,7 +458,7 @@ a{color:var(--accent)}
     watchId: null, lastFetchPos: null, notified: new Set(), ctl: null, turns: [],
     heading: null, sort: "near", current: null, fitted: false,
     meta: (() => { try { return JSON.parse(store.get("meta4", "{}")); } catch { return {}; } })(),
-    wiki: [], views: [], food: [], foodCands: [], filter: "all",
+    wiki: [], views: [], food: [], foodCands: [], filter: "all", exploring: false, realPos: null,
     teasers: {}, enrichRun: 0
   };
 
@@ -516,6 +564,19 @@ a{color:var(--accent)}
     map.on("error", e => { if (!styled) fallback(); });
     setTimeout(fallback, 7000);
     map.on("dragstart", () => { state.follow = false; });
+    map.on("click", e => {
+      if (e.originalEvent?.target?.closest?.(".mkw,.tappin")) return;
+      clearTap();
+      const el = document.createElement("div"); el.className = "tappin";
+      el.innerHTML = `<button type="button">Что тут интересного?</button><i></i>`;
+      el.querySelector("button").addEventListener("click", ev => { ev.stopPropagation(); enterExplore({ lat: e.lngLat.lat, lon: e.lngLat.lng }); });
+      tapMarker = new maplibregl.Marker({ element: el, anchor: "bottom" }).setLngLat(e.lngLat).addTo(map);
+    });
+    map.on("moveend", () => {
+      if (!state.pos || !$("searchBox").hidden){ $("searchHere").hidden = true; return; }
+      const c = map.getCenter();
+      $("searchHere").hidden = haversine({ lat: c.lat, lon: c.lng }, state.pos) < Math.max(400, radius() / 2);
+    });
     meEl = document.createElement("div");
     meEl.innerHTML = `<div class="me"><svg class="cone" hidden viewBox="0 0 120 120"><defs><radialGradient id="cg" cx="50%" cy="100%" r="100%"><stop offset="0" stop-color="${dark ? "#8497FF" : "#2440E6"}" stop-opacity=".55"/><stop offset="1" stop-color="${dark ? "#8497FF" : "#2440E6"}" stop-opacity="0"/></radialGradient></defs><path d="M60 60 L32 8 A58 58 0 0 1 88 8 Z" fill="url(#cg)"/></svg><div class="dotme"></div></div>`;
     meMarker = new maplibregl.Marker({ element: meEl, rotationAlignment: "viewport" }).setLngLat([pos.lon, pos.lat]).addTo(map);
@@ -596,7 +657,8 @@ a{color:var(--accent)}
     finally { $("locate").disabled = false; $("locateText").textContent = "Найти меня"; }
   }
   async function updatePosition(pos, force){
-    state.pos = pos;
+    if (state.exploring){ state.realPos = pos; await ensureMap(pos); moveMe(pos); return; }
+    state.pos = pos; state.realPos = pos;
     store.set("lastPos", JSON.stringify({ lat: pos.lat, lon: pos.lon }));
     await ensureMap(pos); moveMe(pos);
     $("actions").hidden = false; $("walkRow").hidden = false;
@@ -625,6 +687,106 @@ a{color:var(--accent)}
     $("whereStreet").textContent = pl.street || pl.hood || pl.city || "Ты здесь";
     $("whereHood").textContent = [pl.hood, pl.city].filter(Boolean).join(" · ");
     $("sub").textContent = [pl.hood, pl.city].filter(Boolean).join(", ") || "Открывай город вокруг себя";
+  }
+
+  // ---------- explore any point (for future walks) ----------
+  const PIN_SVG = '<svg class="xpin" viewBox="0 0 34 44"><path d="M17 43C17 43 3 26.5 3 16a14 14 0 0 1 28 0c0 10.5-14 27-14 27z" fill="#FFD23F" stroke="#15201C" stroke-width="2.5"/><circle cx="17" cy="16" r="5.5" fill="#15201C"/></svg>';
+  let pinMarker = null, tapMarker = null;
+  const readList = k => { try { return JSON.parse(store.get(k, "[]")) || []; } catch { return []; } };
+  function setPin(pt){
+    if (!map) return;
+    if (!pinMarker){ const el = document.createElement("div"); el.innerHTML = PIN_SVG; pinMarker = new maplibregl.Marker({ element: el, anchor: "bottom" }); }
+    pinMarker.setLngLat([pt.lon, pt.lat]).addTo(map);
+  }
+  function clearTap(){ tapMarker?.remove(); tapMarker = null; }
+  async function enterExplore(pt, label){
+    clearTap(); closeSearch();
+    if (compassOn) stopCompass();
+    if ($("walk").checked){ $("walk").checked = false; stopWalk(); }
+    state.exploring = true;
+    state.pos = { lat: pt.lat, lon: pt.lon, acc: 0 };
+    state.lastFetchPos = state.pos; state.fitted = false; state.filter = "all";
+    await ensureMap(state.pos);
+    if (!map) return;
+    setPin(pt);
+    map.easeTo({ center: [pt.lon, pt.lat], zoom: Math.max(15, Math.min(map.getZoom(), 16.5)), bearing: 0, duration: 700 });
+    $("compass").disabled = true; $("walkRow").hidden = true; $("actions").hidden = false; $("searchHere").hidden = true;
+    $("exploreBar").hidden = false; $("exploreName").textContent = label || "Точка на карте";
+    $("lookLabel").textContent = "Что тут смотреть";
+    updateSaveBtn();
+    say(dots + " Смотрю, что там интересного");
+    const [place] = await Promise.all([reverse(pt).catch(() => null), loadNearby(state.pos)]);
+    if (place){
+      showPlace(place);
+      const nm = label || [place.street, place.hood].filter(Boolean).join(", ") || place.city || "Точка на карте";
+      $("exploreName").textContent = nm; state.exploreLabel = nm;
+      const rec = readList("recent").filter(r => haversine(r, pt) > 150);
+      rec.unshift({ lat: pt.lat, lon: pt.lon, name: nm, sub: [place.hood, place.city].filter(Boolean).join(", ") });
+      store.set("recent", JSON.stringify(rec.slice(0, 6)));
+    }
+    say("");
+  }
+  function exitExplore(){
+    state.exploring = false; state.exploreLabel = "";
+    pinMarker?.remove(); clearTap();
+    $("exploreBar").hidden = true; $("compass").disabled = false; $("lookLabel").textContent = "Оглядеться";
+    state.fitted = false; state.lastFetchPos = null;
+    locate(true);
+  }
+  function updateSaveBtn(){
+    const saved = readList("saved").some(r => state.pos && haversine(r, state.pos) < 60);
+    $("saveSpot").setAttribute("aria-pressed", saved); $("saveSpot").querySelector("span").textContent = saved ? "Сохранено" : "Сохранить";
+  }
+  function toggleSave(){
+    if (!state.pos) return;
+    let saved = readList("saved");
+    const i = saved.findIndex(r => haversine(r, state.pos) < 60);
+    if (i >= 0) saved.splice(i, 1);
+    else saved.unshift({ lat: state.pos.lat, lon: state.pos.lon, name: $("exploreName").textContent, sub: [state.place?.hood, state.place?.city].filter(Boolean).join(", ") });
+    store.set("saved", JSON.stringify(saved.slice(0, 50)));
+    updateSaveBtn();
+  }
+
+  // search: Nominatim, biased to what the map shows
+  let searchTimer = null, searchCtl = null;
+  async function openSearch(){
+    if (!map){
+      let lp = null; try { lp = JSON.parse(store.get("lastPos", "null")); } catch {}
+      await ensureMap(lp || { lat: 48.8566, lon: 2.3522 });
+    }
+    $("searchBox").hidden = false; $("q").value = ""; renderSearchHome(); setTimeout(() => $("q").focus(), 50);
+  }
+  function closeSearch(){ $("searchBox").hidden = true; searchCtl?.abort(); }
+  const PIN_I = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-7.2-7-12a7 7 0 0 1 14 0c0 4.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>';
+  const BOOK_I = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 3h12v18l-6-4-6 4z"/></svg>';
+  const CLOCK_I = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+  function itemHtml(r, icon, kind, i){
+    return `<button type="button" class="sb-item" data-lat="${r.lat}" data-lon="${r.lon}" data-name="${esc(r.name)}">${icon}<span style="min-width:0"><b>${esc(r.name)}</b>${r.sub ? `<span>${esc(r.sub)}</span>` : ""}</span>${kind === "saved" ? `<span class="del" data-del="${i}" aria-label="Удалить">✕</span>` : "<span></span>"}</button>`;
+  }
+  function renderSearchHome(){
+    const saved = readList("saved"), recent = readList("recent");
+    let h = "";
+    if (saved.length) h += `<div class="sb-lbl">Сохранённые</div>` + saved.map((r, i) => itemHtml(r, BOOK_I, "saved", i)).join("");
+    if (recent.length) h += `<div class="sb-lbl">Недавние</div>` + recent.map(r => itemHtml(r, CLOCK_I)).join("");
+    h += `<div class="sb-empty">Или просто нажми на любую точку карты. Когда сдвинешь карту, появится кнопка «Искать здесь».</div>`;
+    $("qRes").innerHTML = h;
+  }
+  async function runSearch(q){
+    searchCtl?.abort(); searchCtl = new AbortController();
+    $("qRes").innerHTML = `<div class="sb-empty">${dots} Ищу</div>`;
+    let vb = "";
+    if (map){ const b = map.getBounds(); const pad = 0.5; vb = `&viewbox=${b.getWest() - pad},${b.getNorth() + pad},${b.getEast() + pad},${b.getSouth() - pad}`; }
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=7&accept-language=ru&q=${enc(q)}${vb}`, { signal: searchCtl.signal });
+      const arr = await r.json();
+      if (!arr.length){ $("qRes").innerHTML = `<div class="sb-empty">Ничего не нашлось. Попробуй иначе: название места, улица или район с городом.</div>`; return; }
+      $("qRes").innerHTML = arr.map(x => {
+        const a = x.address || {};
+        const name = x.name || x.display_name.split(",")[0];
+        const sub = [a.road && a.road !== name ? a.road : "", a.suburb || a.city_district || a.neighbourhood, a.city || a.town || a.village, a.country].filter(Boolean).join(", ");
+        return itemHtml({ lat: +x.lat, lon: +x.lon, name, sub }, PIN_I);
+      }).join("");
+    } catch (e){ if (e.name !== "AbortError") $("qRes").innerHTML = `<div class="sb-empty">Поиск не ответил. Проверь интернет и попробуй ещё раз.</div>`; }
   }
 
   // ---------- Wikipedia ----------
@@ -1204,7 +1366,7 @@ a{color:var(--accent)}
       `<a class="btn btn-main" href="${nav}" target="_blank" rel="noopener">Маршрут</a>` +
       `<a class="btn btn-ghost" href="https://www.google.com/search?tbm=isch&q=${enc(it.title)}" target="_blank" rel="noopener">Ещё фото</a>` +
       `<a class="btn btn-ghost" href="${esc(it.url)}" target="_blank" rel="noopener">Википедия</a>`;
-    const where = `Я стою в ${fmtDist(it.dist)} от этого места, оно от меня ${dir}. Я сейчас: ${wherePhrase()}.`;
+    const where = state.exploring ? `Я планирую прогулку и разглядываю на карте точку: ${wherePhrase()}. Место в ${fmtDist(it.dist)} от неё. Меня сейчас там нет, так что рассказывай так, чтобы захотелось туда пойти.` : `Я стою в ${fmtDist(it.dist)} от этого места, оно от меня ${dir}. Я сейчас: ${wherePhrase()}.`;
     let cite = await wikiFull(it);
     if (signal.aborted) return;
     if (!cite && extract) cite = { docs: [{ url: it.url, title: it.title, lang: it.lang }], paras: extract.split(/\n+/).filter(l => l.trim().length > 30).map(t => ({ d: 0, h: "", t: t.trim() })) };
@@ -1231,7 +1393,7 @@ a{color:var(--accent)}
       `<a class="btn btn-ghost" href="https://www.google.com/search?tbm=isch&q=${q}" target="_blank" rel="noopener">Фото</a>` +
       (t.website || t["contact:website"] ? `<a class="btn btn-ghost" href="${esc(t.website || t["contact:website"])}" target="_blank" rel="noopener">Сайт</a>` : "");
     const facts = [it.desc, addr && "адрес: " + addr, t.opening_hours && "часы: " + t.opening_hours].filter(Boolean).join("; ");
-    const where = `Я стою в ${fmtDist(it.dist)}, место от меня ${dir}. Я сейчас: ${wherePhrase()}.`;
+    const where = state.exploring ? `Я планирую прогулку сюда: ${wherePhrase()}. Место в ${fmtDist(it.dist)} от точки на карте, меня там пока нет.` : `Я стою в ${fmtDist(it.dist)}, место от меня ${dir}. Я сейчас: ${wherePhrase()}.`;
     let prompt;
     if (it.kind === "food"){
       prompt = `${VOICE}\n\nЗаведение «${it.title}» (${facts}), ${city}. ${where}\nРасскажи нам про него: чем оно знаменито, его история и люди за ним, кто из известных тут бывал (только если точно знаешь), что обязательно заказать, когда лучше прийти, какие цены примерно. Если это место тебе на самом деле не знакомо, честно скажи это одной фразой и дай общий совет по такому типу заведений в этом районе, ничего не выдумывая. ${LEN.short.words}, короткие абзацы, без списков, без эмодзи.`;
@@ -1245,12 +1407,21 @@ a{color:var(--accent)}
     });
   }
 
+  function exploreStory(pool, lines){
+    const name = state.exploreLabel || wherePhrase();
+    const prompt = `${VOICE}\n\nЯ планирую будущую прогулку и разглядываю на карте точку: ${wherePhrase()}. Меня там пока нет.\nЧто есть рядом по Википедии и OpenStreetMap:\n${lines || "(почти ничего)"}\n\nЗаинтригуй нас этим местом так, чтобы захотелось туда поехать: самые сильные истории вокруг, ради чего стоит прийти, где поесть и где сделать кадр для инсты. В конце подзаголовок «## Маршрут на час» и порядок, в котором всё обойти, с примерным временем. Короткие абзацы, без списков, ${len() === "short" ? "150–220" : len() === "long" ? "400–550" : "250–380"} слов, без эмодзи, сразу с крючка.`;
+    prepSheet({ title: name, img: pool.find(i => i.img)?.img?.replace(/\/\d+px-/, "/1200px-") || "", meta: `<span>${esc(wherePhrase())}</span>` });
+    $("pActions").innerHTML = `<a class="btn btn-main" href="https://www.google.com/maps/dir/?api=1&travelmode=transit&destination=${state.pos.lat},${state.pos.lon}" target="_blank" rel="noopener">Как добраться</a>`;
+    runStory({ id: null, prompt, maxTokens: LEN[len()].tokens + 600 });
+  }
+
   function lookAround(){
     if (!state.pos) return;
     const hasH = state.heading != null;
     const pool = state.items.filter(i => i.dist < 600).slice(0, 14);
     const lines = pool.map(i => { const m = state.meta[i.id]; const tg = [...tagsOf(i)].map(x => x === "food" ? "вкусно" : x === "photo" ? "для фото" : TOPICS[x]).join(", "); return `- ${i.title}${i.desc ? " (" + i.desc + ")" : ""}: ${fmtDist(i.dist)}, ${hasH ? relWord(angDiff(i.bearing, state.heading)) : compassWord(i.bearing)}${tg ? "; метки: " + tg : ""}${m?.h ? "; факт: " + m.h : ""}`; }).join("\n");
     const orient = hasH ? `Я смотрю ${compassWord(state.heading)} (${Math.round(state.heading)}°). Направления ниже даны относительно того, куда я смотрю.` : `Компас выключен, поэтому направления ниже по сторонам света.`;
+    if (state.exploring) return exploreStory(pool, lines);
     const prompt = `${VOICE}\n\nЯ только что пришёл сюда и вообще не знаю этот город: ${wherePhrase()}. ${orient}\nЧто есть рядом по Википедии:\n${lines || "(в Википедии рядом почти ничего)"}\n\nМы с друзьями стоим тут и крутим головами. Проведи нас взглядом, как экскурсовод, живой речью: ${hasH ? "начни с того, что прямо перед нами, потом «а теперь гляньте направо», налево, и «обернитесь»." : "пройдись по сторонам света: «гляньте на север…»."} Говори, на что смотреть глазами (здания, шпили, вывески, деревья), что это и какая там дичь или байка. Закончи подзаголовком «## Куда рванём первым» и одним-двумя советами, куда шагнуть прямо сейчас и сколько идти. Короткие абзацы, без списков, ${len() === "short" ? "120–180" : len() === "long" ? "350–500" : "200–320"} слов, без эмодзи, сразу с крючка.`;
     prepSheet({
       title: hasH ? `Смотришь ${compassWord(state.heading)}` : "Что вокруг тебя",
@@ -1263,7 +1434,7 @@ a{color:var(--accent)}
   function areaStory(){
     if (!state.pos) return;
     const names = state.items.slice(0, 15).map(i => i.title).join("; ");
-    const prompt = `${VOICE}\n\nЯ сейчас здесь: ${wherePhrase()} (${state.pos.lat.toFixed(5)}, ${state.pos.lon.toFixed(5)}). Рядом отмечены: ${names}.\nРасскажи нам с друзьями про этот район живой речью: какой у него характер, какая тут была дичь раньше, кто из звёзд тут жил, где снимали кино, что тут едят и куда пройтись минут на 30–60. Можно 3–4 интригующих подзаголовка через «## », последний про маршрут на час. Короткие абзацы, без списков, ${LEN[len()].words.replace(/\d+/g, n => String(Math.round(n * 1.2)))}, без эмодзи, сразу с крючка.`;
+    const prompt = `${VOICE}\n\n${state.exploring ? "Я планирую прогулку в этот район, меня там пока нет" : "Я сейчас здесь"}: ${wherePhrase()} (${state.pos.lat.toFixed(5)}, ${state.pos.lon.toFixed(5)}). Рядом отмечены: ${names}.\nРасскажи нам с друзьями про этот район живой речью: какой у него характер, какая тут была дичь раньше, кто из звёзд тут жил, где снимали кино, что тут едят и куда пройтись минут на 30–60. Можно 3–4 интригующих подзаголовка через «## », последний про маршрут на час. Короткие абзацы, без списков, ${LEN[len()].words.replace(/\d+/g, n => String(Math.round(n * 1.2)))}, без эмодзи, сразу с крючка.`;
     const title = state.place?.hood || state.place?.city || "Этот район";
     prepSheet({ title, img: state.items.find(i => i.img)?.img?.replace(/\/\d+px-/, "/1200px-") || "", meta: `<span>${esc(wherePhrase())}</span>` });
     $("pActions").innerHTML = `<a class="btn btn-ghost" href="https://www.openstreetmap.org/?mlat=${state.pos.lat}&mlon=${state.pos.lon}#map=16/${state.pos.lat}/${state.pos.lon}" target="_blank" rel="noopener">Карта</a>`;
@@ -1394,7 +1565,26 @@ a{color:var(--accent)}
 
   // ---------- wiring ----------
   $("locate").addEventListener("click", () => locate(true));
-  $("recenter").addEventListener("click", () => locate(true));
+  $("recenter").addEventListener("click", () => state.exploring ? exitExplore() : locate(true));
+  $("backToMe").addEventListener("click", exitExplore);
+  $("saveSpot").addEventListener("click", toggleSave);
+  $("searchBtn").addEventListener("click", openSearch);
+  $("searchEmpty").addEventListener("click", openSearch);
+  $("searchClose").addEventListener("click", closeSearch);
+  $("searchHere").addEventListener("click", () => { const c = map.getCenter(); enterExplore({ lat: c.lat, lon: c.lng }); });
+  $("q").addEventListener("input", e => {
+    clearTimeout(searchTimer);
+    const v = e.target.value.trim();
+    if (v.length < 3){ renderSearchHome(); return; }
+    searchTimer = setTimeout(() => runSearch(v), 500);
+  });
+  $("searchForm").addEventListener("submit", e => { e.preventDefault(); const v = $("q").value.trim(); if (v.length >= 2){ clearTimeout(searchTimer); runSearch(v); } });
+  $("qRes").addEventListener("click", e => {
+    const del = e.target.closest("[data-del]");
+    if (del){ e.stopPropagation(); const saved = readList("saved"); saved.splice(Number(del.dataset.del), 1); store.set("saved", JSON.stringify(saved)); renderSearchHome(); return; }
+    const b = e.target.closest(".sb-item"); if (!b) return;
+    enterExplore({ lat: Number(b.dataset.lat), lon: Number(b.dataset.lon) }, b.dataset.name);
+  });
   $("compass").addEventListener("click", toggleCompass);
   $("lookAround").addEventListener("click", lookAround);
   $("areaStory").addEventListener("click", areaStory);
