@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css">
 <style>
 :root{
   color-scheme:light;
@@ -55,9 +55,10 @@ a{color:var(--accent)}
 /* map */
 .mapwrap{position:relative;border-radius:22px;overflow:hidden;box-shadow:var(--shadow);background:var(--surface-2);height:min(52vh,460px);min-height:280px}
 #map{position:absolute;inset:0;z-index:1;background:var(--surface-2)}
-.leaflet-container{font:inherit;background:var(--surface-2)}
-.leaflet-control-attribution{font-size:10px!important;background:color-mix(in srgb,var(--surface) 80%,transparent)!important;color:var(--muted)!important}
-.leaflet-control-attribution a{color:var(--muted)!important}
+.maplibregl-map{font:inherit}
+.maplibregl-ctrl-attrib{font-size:10px!important}
+.maplibregl-ctrl-bottom-right{z-index:3}
+.mkw{cursor:pointer}
 .map-empty{position:absolute;inset:0;z-index:2;display:grid;place-items:center;align-content:center;gap:14px;text-align:center;padding:24px;
   background:radial-gradient(circle at 50% 45%,var(--accent-soft),transparent 60%),repeating-linear-gradient(0deg,transparent 0 39px,var(--line) 39px 40px),repeating-linear-gradient(90deg,transparent 0 39px,var(--line) 39px 40px),var(--surface-2)}
 .map-empty h1{font-family:var(--display);font-weight:700;font-size:clamp(22px,6vw,28px);line-height:1.15;margin:0;max-width:18ch;text-wrap:balance}
@@ -81,9 +82,12 @@ a{color:var(--accent)}
 .mk.food{border-color:var(--food);color:var(--food)}
 .mk.photo{border-color:var(--photo);color:var(--photo)}
 .mk.dim{opacity:.25}
+.mk.ic.minor{width:22px;height:22px;margin:9px;border-width:2px;opacity:.85}
+.mk.ic.minor svg{width:12px;height:12px}
 .mk.new{border-color:var(--hi)}
 .mk.front{transform:scale(1.18);border-color:var(--accent)}
 .me{width:120px;height:120px;position:relative;pointer-events:none}
+.mapwrap .maplibregl-marker{will-change:transform}
 .me .cone{position:absolute;inset:0;transform:rotate(var(--h,0deg));transition:transform .15s linear}
 .me .cone[hidden]{display:none}
 .me .dotme{position:absolute;left:50%;top:50%;width:20px;height:20px;margin:-10px 0 0 -10px;border-radius:50%;background:var(--accent);border:3px solid #fff;box-shadow:0 0 0 6px var(--accent-soft)}
@@ -346,7 +350,7 @@ a{color:var(--accent)}
 
 <div class="toast" id="toast" hidden role="status"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
 <script>
 (() => {
   const $ = id => document.getElementById(id);
@@ -361,6 +365,7 @@ a{color:var(--accent)}
     long:   { words: "400–550 слов", tokens: 1600, secs: "сильнейший факт, главная история с именами и развязкой, ещё одна история, что тут творится сейчас, связь с кино, музыкой или звёздами (только реальная, иначе пропусти), детали, которые все пропускают, в конце совет, что сделать прямо сейчас" }
   };
   const HOOK_MODEL = "claude-haiku-4-5-20251001";
+  const FOOD_MODEL = "claude-sonnet-5"; // better restaurant knowledge; one small call per area
   const TOPICS = {
     history: "История", politics: "Политика", fashion: "Мода", film: "Кино", pop: "Поп-культура",
     music: "Музыка", art: "Искусство", architecture: "Архитектура", literature: "Литература", sport: "Спорт", science: "Наука"
@@ -389,7 +394,7 @@ a{color:var(--accent)}
     pos: null, place: null, items: [], seen: new Set(JSON.parse(store.get("seen", "[]"))),
     watchId: null, lastFetchPos: null, notified: new Set(), ctl: null, turns: [],
     heading: null, sort: "near", current: null, fitted: false,
-    meta: (() => { try { return JSON.parse(store.get("meta3", "{}")); } catch { return {}; } })(),
+    meta: (() => { try { return JSON.parse(store.get("meta4", "{}")); } catch { return {}; } })(),
     wiki: [], views: [], food: [], foodCands: [], filter: "all",
     teasers: {}, enrichRun: 0
   };
@@ -449,73 +454,75 @@ a{color:var(--accent)}
     m.hidden = false; m.className = "msg" + (err ? " err" : ""); m.innerHTML = text;
   }
 
-  // ---------- map ----------
-  let map = null, meMarker = null, accCircle = null, layer = null;
+  // ---------- map (MapLibre + OpenFreeMap, no keys) ----------
+  let map = null, meMarker = null, meEl = null;
   const markers = new Map();
   const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const TILES = [
-    { url: `https://{s}.basemaps.cartocdn.com/${dark ? "dark_all" : "rastertiles/voyager"}/{z}/{x}/{y}{r}.png`, o: { subdomains: "abcd", maxZoom: 20, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>' } },
-    { url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png", o: { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' } }
-  ];
-  let tileIdx = 0, tileLayer = null;
-  function setTiles(i){
-    tileIdx = i; if (tileLayer) map.removeLayer(tileLayer);
-    let ok = 0, bad = 0;
-    tileLayer = L.tileLayer(TILES[i].url, TILES[i].o).addTo(map);
-    tileLayer.on("tileload", () => { ok++; });
-    tileLayer.on("tileerror", () => { bad++; if (!ok && bad >= 4 && tileIdx + 1 < TILES.length) setTiles(tileIdx + 1); });
-  }
-  // Leaflet fallback: if cdnjs is blocked, try jsDelivr once
-  let leafletLoading = null;
-  function loadLeaflet(){
-    if (window.L) return Promise.resolve(true);
-    if (leafletLoading) return leafletLoading;
-    leafletLoading = new Promise(res => {
-      const css = document.createElement("link"); css.rel = "stylesheet"; css.href = "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"; document.head.appendChild(css);
-      const sc = document.createElement("script"); sc.src = "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js";
-      sc.onload = () => res(!!window.L); sc.onerror = () => res(false); document.head.appendChild(sc);
+  const STYLE_VECTOR = `https://tiles.openfreemap.org/styles/${dark ? "dark" : "positron"}`;
+  const STYLE_RASTER = {
+    version: 8,
+    sources: { osm: { type: "raster", tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"], tileSize: 256, maxzoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' } },
+    layers: [{ id: "osm", type: "raster", source: "osm", paint: dark ? { "raster-brightness-max": 0.55, "raster-saturation": -0.5 } : { "raster-saturation": -0.35 } }]
+  };
+  let mlLoading = null;
+  function loadMapLib(){
+    if (window.maplibregl) return Promise.resolve(true);
+    if (mlLoading) return mlLoading;
+    mlLoading = new Promise(res => {
+      const css = document.createElement("link"); css.rel = "stylesheet"; css.href = "https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css"; document.head.appendChild(css);
+      const sc = document.createElement("script"); sc.src = "https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js";
+      sc.onload = () => res(!!window.maplibregl); sc.onerror = () => res(false); document.head.appendChild(sc);
     });
-    return leafletLoading;
+    return mlLoading;
   }
   async function ensureMap(pos){
     if (map) return;
-    if (!window.L && !(await loadLeaflet())){ say("Карта не загрузилась: похоже, её блокирует сеть или блокировщик рекламы. Список мест ниже всё равно работает.", true); return; }
+    if (!window.maplibregl && !(await loadMapLib())){ say("Карта не загрузилась: похоже, её блокирует сеть или блокировщик рекламы. Список мест ниже всё равно работает.", true); return; }
     if (map) return;
-    map = L.map("map", { zoomControl: false, attributionControl: true }).setView([pos.lat, pos.lon], 16);
-    setTiles(0);
-    window.addEventListener("resize", () => map.invalidateSize());
-    layer = L.layerGroup().addTo(map);
-    const meIcon = L.divIcon({ className: "", iconSize: [120, 120], iconAnchor: [60, 60],
-      html: `<div class="me"><svg class="cone" hidden viewBox="0 0 120 120"><defs><radialGradient id="cg" cx="50%" cy="100%" r="100%"><stop offset="0" stop-color="${dark ? "#8497FF" : "#2440E6"}" stop-opacity=".55"/><stop offset="1" stop-color="${dark ? "#8497FF" : "#2440E6"}" stop-opacity="0"/></radialGradient></defs><path d="M60 60 L32 8 A58 58 0 0 1 88 8 Z" fill="url(#cg)"/></svg><div class="dotme"></div></div>` });
-    meMarker = L.marker([pos.lat, pos.lon], { icon: meIcon, interactive: false, zIndexOffset: 1000 }).addTo(map);
-    accCircle = L.circle([pos.lat, pos.lon], { radius: 20, color: dark ? "#8497FF" : "#2440E6", weight: 1, opacity: .4, fillOpacity: .06 }).addTo(map);
+    try {
+      map = new maplibregl.Map({ container: "map", style: STYLE_VECTOR, center: [pos.lon, pos.lat], zoom: 15.6,
+        attributionControl: { compact: true }, dragRotate: false, pitchWithRotate: false, touchPitch: false, fadeDuration: 0 });
+    } catch (e){ say("Карта не запустилась на этом устройстве (" + esc(e.message || "WebGL") + "). Список мест ниже работает.", true); map = null; return; }
+    map.touchZoomRotate.disableRotation();
+    let styled = false, fell = false;
+    const fallback = () => { if (styled || fell) return; fell = true; map.setStyle(STYLE_RASTER); };
+    map.on("style.load", () => { styled = true; });
+    map.on("error", e => { if (!styled) fallback(); });
+    setTimeout(fallback, 7000);
+    map.on("dragstart", () => { state.follow = false; });
+    meEl = document.createElement("div");
+    meEl.innerHTML = `<div class="me"><svg class="cone" hidden viewBox="0 0 120 120"><defs><radialGradient id="cg" cx="50%" cy="100%" r="100%"><stop offset="0" stop-color="${dark ? "#8497FF" : "#2440E6"}" stop-opacity=".55"/><stop offset="1" stop-color="${dark ? "#8497FF" : "#2440E6"}" stop-opacity="0"/></radialGradient></defs><path d="M60 60 L32 8 A58 58 0 0 1 88 8 Z" fill="url(#cg)"/></svg><div class="dotme"></div></div>`;
+    meMarker = new maplibregl.Marker({ element: meEl, rotationAlignment: "viewport" }).setLngLat([pos.lon, pos.lat]).addTo(map);
     $("mapEmpty").hidden = true; $("mapBtns").hidden = false;
   }
-  function moveMe(pos){
-    if (!map) return;
-    meMarker.setLatLng([pos.lat, pos.lon]);
-    accCircle.setLatLng([pos.lat, pos.lon]).setRadius(Math.min(pos.acc || 20, 300));
-  }
+  function moveMe(pos){ if (map && meMarker) meMarker.setLngLat([pos.lon, pos.lat]); }
+  function centerOn(pos){ if (map) map.easeTo({ center: [pos.lon, pos.lat], zoom: Math.max(map.getZoom(), 16), duration: 600 }); }
   function drawMarkers(){
     if (!map) return;
-    layer.clearLayers(); markers.clear();
-    for (const it of state.items){
+    for (const m of markers.values()) m.remove();
+    markers.clear();
+    // draw filtered-out first so the ones that pass sit on top
+    const base = state.filter === "food" ? [...state.items, ...restFood()] : state.items;
+    const list = [...base].sort((a, b) => (passes(a) || a.kind === "food" && state.filter === "food" ? 1 : 0) - (passes(b) || b.kind === "food" && state.filter === "food" ? 1 : 0));
+    for (const it of list){
       const tg = tagsOf(it);
       const iconKind = !it.img && (it.kind === "food" ? "food" : it.kind === "view" ? "photo" : "");
-      const cls = "mk" + (iconKind ? " ic " + iconKind : it.img ? "" : " dot") + (it.img && tg.has("food") ? " food" : it.img && tg.has("photo") ? " photo" : "") + (state.seen.has(it.id) || iconKind ? "" : " new") + (passes(it) ? "" : " dim");
-      const style = it.img ? ` style="background-image:url('${esc(it.img).replace(/'/g, "%27")}')"` : "";
-      const size = 40;
-      const icon = L.divIcon({ className: "", iconSize: [size, size], iconAnchor: [size / 2, size / 2], html: `<div class="${cls}" data-id="${esc(it.id)}"${style}>${iconKind ? ICON[iconKind] : ""}</div>` });
-      const m = L.marker([it.lat, it.lon], { icon, title: it.title, zIndexOffset: passes(it) ? (it.img ? 200 : 100) : 0 }).addTo(layer);
-      m.on("click", () => openPlace(it));
-      markers.set(it.id, m);
+      const visible = passes(it) || (state.filter === "food" && it.kind === "food");
+      const cls = "mk" + (iconKind ? " ic " + iconKind : it.img ? "" : " dot") + (it.kind === "food" && !it.pick ? " minor" : "") + (it.img && tg.has("food") ? " food" : it.img && tg.has("photo") ? " photo" : "") + (state.seen.has(it.id) || iconKind ? "" : " new") + (visible ? "" : " dim");
+      const el = document.createElement("div");
+      el.className = "mkw"; el.title = it.title;
+      el.innerHTML = `<div class="${cls}" data-id="${esc(it.id)}"${it.img ? ` style="background-image:url('${esc(it.img).replace(/'/g, "%27")}')"` : ""}>${iconKind ? ICON[iconKind] : ""}</div>`;
+      el.addEventListener("click", e => { e.stopPropagation(); openPlace(it); });
+      markers.set(it.id, new maplibregl.Marker({ element: el }).setLngLat([it.lon, it.lat]).addTo(map));
     }
     if (!state.fitted && state.pos){
       state.fitted = true;
       const near = state.items.filter(i => i.dist < 700).slice(0, 12);
       if (near.length >= 3){
-        const b = L.latLngBounds([[state.pos.lat, state.pos.lon], ...near.map(i => [i.lat, i.lon])]);
-        map.fitBounds(b, { padding: [40, 40], maxZoom: 17 });
+        const b = new maplibregl.LngLatBounds([state.pos.lon, state.pos.lat], [state.pos.lon, state.pos.lat]);
+        near.forEach(i => b.extend([i.lon, i.lat]));
+        map.fitBounds(b, { padding: 40, maxZoom: 17, bearing: map.getBearing(), duration: 0 });
       }
     }
     highlightFront();
@@ -529,6 +536,15 @@ a{color:var(--accent)}
         document.querySelector(`.mk[data-id="${CSS.escape(it.id)}"]`)?.classList.add("front");
       }
     }
+  }
+  // with the compass on, the map turns so that the top of the screen is where you look
+  let lastRot = 0;
+  function rotateMap(h){
+    if (!map) return;
+    const now = performance.now();
+    if (now - lastRot > 150){ lastRot = now; map.rotateTo(h, { duration: 140, easing: t => t }); }
+    const cone = meEl?.querySelector(".cone");
+    if (cone){ cone.hidden = false; cone.style.setProperty("--h", Math.round(angDiff(h, map.getBearing())) + "deg"); }
   }
 
   // ---------- location ----------
@@ -550,7 +566,7 @@ a{color:var(--accent)}
     try {
       const p = await getPos();
       await updatePosition({ lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy }, force);
-      if (map) map.setView([p.coords.latitude, p.coords.longitude], Math.max(map.getZoom(), 16));
+      centerOn({ lat: p.coords.latitude, lon: p.coords.longitude });
     } catch (e){ say(geoErr(e), true); }
     finally { $("locate").disabled = false; $("locateText").textContent = "Найти меня"; }
   }
@@ -628,9 +644,17 @@ a{color:var(--accent)}
       `nwr["shop"~"^(bakery|pastry|chocolate|cheese|deli|confectionery|coffee|tea|wine)$"]["name"](around:${R},${pos.lat},${pos.lon});` +
       `nwr["tourism"~"^(viewpoint|artwork)$"](around:${Math.min(radius(), 1500)},${pos.lat},${pos.lon});` +
       `);out center tags 500;`;
-    const r = await fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: "data=" + enc(q), headers: { "content-type": "application/x-www-form-urlencoded" } });
-    if (!r.ok) return;
-    const j = await r.json();
+    let j = null;
+    for (const ep of ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter", "https://maps.mail.ru/osm/tools/overpass/api/interpreter", "https://overpass.kumi.systems/api/interpreter"]){
+      try {
+        const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 15000);
+        const r = await fetch(ep, { method: "POST", body: "data=" + enc(q), headers: { "content-type": "application/x-www-form-urlencoded" }, signal: ctl.signal });
+        clearTimeout(tm);
+        if (r.ok){ j = await r.json(); if (j && j.elements) break; }
+      } catch {}
+    }
+    state.osmFailed = !j;
+    if (!j) return;
     const food = [], views = [];
     for (const e of j.elements || []){
       const lat = e.lat ?? e.center?.lat, lon = e.lon ?? e.center?.lon, t = e.tags || {};
@@ -655,18 +679,21 @@ a{color:var(--accent)}
   // Claude picks genuinely notable food spots out of real OSM names (never invents new ones)
   async function pickFood(){
     if (!state.foodCands.length || !state.pos) return;
-    const areaKey = "food1." + (Math.round(state.pos.lat * 200) / 200) + "." + (Math.round(state.pos.lon * 200) / 200);
+    const areaKey = "food2." + (Math.round(state.pos.lat * 200) / 200) + "." + (Math.round(state.pos.lon * 200) / 200);
     const apply = picks => {
       const byId = new Map(state.foodCands.map(f => [f.id, f]));
-      state.food = picks.map(p => { const f = byId.get(p.id); if (!f) return null; state.meta[f.id] = { h: p.h, t: ["food"] }; return f; }).filter(Boolean);
+      state.foodCands.forEach(f => { f.pick = false; });
+      state.food = picks.map(p => { const f = byId.get(p.id); if (!f) return null; f.pick = true; state.meta[f.id] = { h: p.h, t: ["food"] }; return f; }).filter(Boolean);
       recalc(true); renderFilters();
     };
     try { const c = JSON.parse(store.get(areaKey, "null")); if (c){ apply(c); return; } } catch {}
     if (!key()){ renderFilters(); return; }
     const lines = state.foodCands.map((f, n) => `${n + 1}. ${f.title} (${f.desc || "еда"}, ${fmtDist(f.dist)})`).join("\n");
-    const prompt = `Вот реальные заведения рядом со мной (${wherePhrase()}), по данным OpenStreetMap:\n${lines}\n\nВыбери из списка до 7 мест, которые ты ТОЧНО знаешь как по-настоящему вкусные и известные: легендарные, с наградами (Michelin, лучший багет/круассан города и т.п.), культовые у местных, из гидов и громких обзоров. Не угадывай по названию или кухне: если конкретное место тебе неизвестно, не бери его. Можно вернуть пустой массив.\nДля каждого — фраза по-русски 50–95 символов, живая и конкретная: чем знамениты и что заказать.\nОтветь только JSON: [{"n": номер, "h": "фраза"}]`;
+    const prompt = `Вот реальные заведения рядом со мной (${wherePhrase()}), по данным OpenStreetMap:\n${lines}\n\nВыбери из списка до 8 мест, которые ты знаешь как особенно вкусные: легендарные, с наградами (Michelin, Bib Gourmand, лучший багет или круассан города и т.п.), из гидов и громких обзоров, или известные как любимые у местных. Не угадывай по названию или кухне: если конкретное место тебе неизвестно, не бери его. Если не знаешь ни одного, верни пустой массив.\nДля каждого — фраза по-русски 50–95 символов, живая и конкретная: чем знамениты и что заказать.\nОтветь только JSON: [{"n": номер, "h": "фраза"}]`;
     try {
-      const text = await claudeStream([{ role: "user", content: prompt }], () => {}, undefined, 700, HOOK_MODEL);
+      let text;
+      try { text = await claudeStream([{ role: "user", content: prompt }], () => {}, undefined, 800, FOOD_MODEL); }
+      catch (e){ if (e.status === 404) text = await claudeStream([{ role: "user", content: prompt }], () => {}, undefined, 800, HOOK_MODEL); else throw e; }
       const arr = JSON.parse(text.slice(text.indexOf("["), text.lastIndexOf("]") + 1));
       const picks = (Array.isArray(arr) ? arr : []).map(p => ({ id: state.foodCands[Number(p.n) - 1]?.id, h: String(p.h || "").trim() })).filter(p => p.id && p.h);
       store.set(areaKey, JSON.stringify(picks));
@@ -676,11 +703,11 @@ a{color:var(--accent)}
   }
   function saveMeta(){
     const keys = Object.keys(state.meta); if (keys.length > 600) for (const k of keys.slice(0, keys.length - 600)) delete state.meta[k];
-    store.set("meta3", JSON.stringify(state.meta));
+    store.set("meta4", JSON.stringify(state.meta)); store.set("meta3", null);
   }
   function recalc(redrawMarkers){
     if (!state.pos) return;
-    const all = [...state.wiki, ...state.views, ...state.food];
+    const all = [...state.wiki, ...state.views, ...state.food, ...restFood()];
     for (const it of all){
       it.dist = haversine(state.pos, it);
       it.bearing = bearing(state.pos, it);
@@ -696,20 +723,22 @@ a{color:var(--accent)}
   }
 
   const ARROW = '<svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>';
-  const tagsOf = it => { const t = new Set(state.meta[it.id]?.t || []); if (it.kind === "food") t.add("food"); if (it.kind === "view") t.add("photo"); return t; };
+  const tagsOf = it => { const t = new Set(it.kind === "food" && !it.pick ? [] : (state.meta[it.id]?.t || [])); if (it.kind === "food" && it.pick) t.add("food"); if (it.kind === "view") t.add("photo"); return t; };
+  const restFood = () => state.foodCands.filter(f => !f.pick).slice(0, 40);
   const passes = it => state.filter === "all" || tagsOf(it).has(state.filter);
   function renderFilters(){
     const box = $("filters"); if (!box) return;
     const keys = ["all", "food", "photo", ...interests()];
-    const count = k => k === "all" ? state.items.length : state.items.filter(i => tagsOf(i).has(k)).length;
+    const count = k => k === "all" ? state.items.length : k === "food" ? state.food.length + restFood().length : state.items.filter(i => tagsOf(i).has(k)).length;
     if (!keys.includes(state.filter)) state.filter = "all";
     box.innerHTML = keys.map(k => {
-      const label = k === "all" ? "Всё" : k === "food" ? ICON.food + "Вкусно" : k === "photo" ? ICON.photo + "Для фото" : TOPICS[k];
+      const label = k === "all" ? "Всё" : k === "food" ? ICON.food + "Вкусно" : k === "photo" ? ICON.photo + "Для инсты" : TOPICS[k];
       const n = count(k);
       return `<button type="button" class="fchip ${k === "food" || k === "photo" ? k : ""}" data-f="${k}" aria-pressed="${state.filter === k}">${label}${k !== "all" ? ` <small>${n}</small>` : ""}</button>`;
     }).join("");
   }
   function sortedForView(){
+    if (state.filter === "food") return [...state.food.sort((a, b) => a.dist - b.dist), ...restFood().sort((a, b) => a.dist - b.dist)];
     const arr = state.items.filter(passes);
     if (state.sort === "front" && state.heading != null){
       arr.sort((a, b) => {
@@ -731,9 +760,15 @@ a{color:var(--accent)}
     $("count").textContent = `${state.items.length} мест`;
     const view = sortedForView();
     if (!view.length){
-      box.innerHTML = `<p class="msg">${state.filter === "food" ? (key() ? "Рядом не нашлось заведений, про которые гид точно знает, что они вкусные. Пройдись немного или увеличь радиус." : "Вкусные места отбирает Claude, поэтому нужен API-ключ в настройках.") : state.filter === "photo" ? "Рядом пока нет отмеченных точек для фото." : "По этой теме рядом пока ничего. Факты по темам появляются, когда Claude разберёт места, а для этого нужен ключ."}</p>`;
+      box.innerHTML = `<p class="msg">${state.filter === "food" ? (state.osmFailed ? "Сервер OpenStreetMap с заведениями сейчас не ответил. Нажми «обновить» на карте через минуту." : "Рядом в OpenStreetMap не отмечено заведений. Увеличь радиус в настройках.") : state.filter === "photo" ? "Рядом пока нет отмеченных точек для фото." : "По этой теме рядом пока ничего. Факты по темам появляются, когда Claude разберёт места, а для этого нужен ключ."}</p>`;
+    }
+    let dividerDone = false;
+    if (state.filter === "food"){
+      box.insertAdjacentHTML("beforeend", state.food.length ? `<p class="msg" style="margin:2px 2px 0">Самое вкусное, что гид знает рядом:</p>` : `<p class="msg" style="margin:2px 2px 0">${key() ? "Среди заведений рядом гид не узнал знаменитых. Вот всё, что поблизости:" : "Знаменитые места отбирает Claude, для этого нужен ключ. А пока всё, что поблизости:"}</p>`);
+      if (!state.food.length) dividerDone = true;
     }
     for (const it of view){
+      if (state.filter === "food" && !dividerDone && !it.pick){ dividerDone = true; box.insertAdjacentHTML("beforeend", `<p class="msg" style="margin:8px 2px 0">Ещё рядом:</p>`); }
       const b = document.createElement("button");
       b.type = "button"; b.className = "row"; b.dataset.id = it.id;
       const rot = state.heading != null ? angDiff(it.bearing, state.heading) : it.bearing;
@@ -746,7 +781,7 @@ a{color:var(--accent)}
   }
   function pillsHtml(it){
     const t = tagsOf(it);
-    return (t.has("food") ? `<span class="pill food">${ICON.food}Вкусно</span>` : "") + (t.has("photo") ? `<span class="pill photo">${ICON.photo}Фото</span>` : "");
+    return (t.has("food") ? `<span class="pill food">${ICON.food}Вкусно</span>` : "") + (t.has("photo") ? `<span class="pill photo">${ICON.photo}Инста</span>` : "");
   }
   function hookHtml(it){
     const h = state.meta[it.id]?.h;
@@ -799,7 +834,7 @@ a{color:var(--accent)}
     if (noHook.length < 1) return;
     const lines = noHook.map((i, n) => `${n + 1}. ${i.title}${i.desc ? " — " + i.desc : ""}\n   ${(i._full || "").slice(0, 400)}`).join("\n");
     const topicList = Object.keys(TOPICS).join(", ");
-    const prompt = `Ты размечаешь места для приложения-гида. Для каждого места ниже верни объект:\n- "h": ОДНА фраза-крючок по-русски, 50–95 символов, разговорная, с интригой и самым сильным конкретным фактом (имя, год, цифра, скандал, рекорд, судьба человека, связь с кино, модой или звездой). Фраза понятна сама по себе: не «здесь жил один человек», а кто именно. Лучше всего факт, который цепляет темы: ${interestsText()}. Без названия места в начале, без эмодзи, без кавычек. Если конкретного факта нет, пустая строка.\n- "t": массив тем из списка [${topicList}, photo], к которым у места есть РЕАЛЬНАЯ связь (0–3 темы). "photo" ставь, только если место правда фотогеничное: эффектный фасад, вид, интерьер, знаменитый ракурс.\n- "p": если есть "photo", короткий совет для кадра до 90 символов (откуда снимать, какое время суток), иначе пустая строка.\nОпирайся только на текст ниже и на то, в чём полностью уверен. Никаких выдумок.\n\n${lines}\n\nОтветь только JSON-массивом из ровно ${noHook.length} объектов в том же порядке.`;
+    const prompt = `Ты размечаешь места для приложения-гида. Для каждого места ниже верни объект:\n- "h": ОДНА фраза-крючок по-русски, 50–95 символов, разговорная, с интригой и самым сильным конкретным фактом (имя, год, цифра, скандал, рекорд, судьба человека, связь с кино, модой или звездой). Фраза понятна сама по себе: не «здесь жил один человек», а кто именно. Лучше всего факт, который цепляет темы: ${interestsText()}. Без названия места в начале, без эмодзи, без кавычек. Если конкретного факта нет, пустая строка.\n- "t": массив тем из списка [${topicList}, photo], к которым у места есть РЕАЛЬНАЯ связь (0–3 темы). "photo" ставь, только если это правда классный фон для Инстаграма и селфи: эффектный фасад, вид, интерьер, узнаваемый ракурс, стрит-арт.\n- "p": если есть "photo", совет для инсты и селфи до 100 символов: где встать, какой ракурс, что попадёт в кадр, какое время (золотой час, утро без толп), иначе пустая строка.\nОпирайся только на текст ниже и на то, в чём полностью уверен. Никаких выдумок.\n\n${lines}\n\nОтветь только JSON-массивом из ровно ${noHook.length} объектов в том же порядке.`;
     try {
       const text = await claudeStream([{ role: "user", content: prompt }], () => {}, undefined, 110 * noHook.length + 150, HOOK_MODEL);
       if (run !== state.enrichRun) return;
@@ -841,7 +876,7 @@ a{color:var(--accent)}
     window.addEventListener("deviceorientationabsolute", onOrient, true);
     window.addEventListener("deviceorientation", onOrient, true);
     $("sortFront").disabled = false;
-    say("Компас включён. Держи телефон горизонтально экраном вверх, и я подсвечу то, что перед тобой.");
+    say("Компас включён: карта повернётся туда, куда ты смотришь, а то, что перед тобой, подсветится. Держи телефон экраном вверх.");
     setTimeout(() => { if (compassOn && state.heading == null) say("Компас не отвечает. На этом устройстве может не быть датчика, или его надо откалибровать восьмёркой.", true); }, 3000);
   }
   function stopCompass(){
@@ -851,6 +886,7 @@ a{color:var(--accent)}
     $("compass").classList.remove("on"); $("compass").setAttribute("aria-pressed", "false");
     $("headingBadge").hidden = true;
     const cone = document.querySelector(".me .cone"); if (cone) cone.hidden = true;
+    if (map) map.easeTo({ bearing: 0, duration: 400 });
     if (state.sort === "front"){ setSort("near"); }
     $("sortFront").disabled = true;
     updateArrows(); highlightFront(); say("");
@@ -867,8 +903,7 @@ a{color:var(--accent)}
     state.heading = smooth;
     const now = performance.now();
     if (now - lastRender < 120) return; lastRender = now;
-    const cone = document.querySelector(".me .cone");
-    if (cone){ cone.hidden = false; cone.style.setProperty("--h", Math.round(smooth) + "deg"); }
+    rotateMap(smooth);
     $("headingBadge").hidden = false;
     $("headingBadge").textContent = `${Math.round(smooth)}° · смотришь ${compassWord(smooth)}`;
     updateArrows();
@@ -1060,7 +1095,7 @@ a{color:var(--accent)}
     const im = $("pImg"); if (it.img) im.onerror = () => { im.onerror = null; im.src = it.img; };
     const mt = state.meta[it.id] || {};
     if (mt.h){ $("pHook").textContent = mt.h; $("pHook").hidden = false; }
-    if (mt.p){ $("pTip").className = "tip"; $("pTip").innerHTML = ICON.photo + `<span><b>Кадр:</b> ${esc(mt.p)}</span>`; $("pTip").hidden = false; }
+    if (mt.p){ $("pTip").className = "tip"; $("pTip").innerHTML = ICON.photo + `<span><b>Для инсты:</b> ${esc(mt.p)}</span>`; $("pTip").hidden = false; }
     const nav = `https://www.google.com/maps/dir/?api=1&travelmode=walking&destination=${it.lat},${it.lon}`;
     const signal = state.ctl.signal;
     if (it.kind === "food" || it.kind === "view") return openOsmPlace(it, dir, nav);
@@ -1075,7 +1110,7 @@ a{color:var(--accent)}
     const full = await wikiFull(it);
     if (signal.aborted) return;
     const material = (full.length > extract.length ? full : extract).slice(0, 7000);
-    const photoAsk = tagsOf(it).has("photo") ? " В самом конце одной-двумя фразами подскажи, откуда и в какое время лучший кадр." : "";
+    const photoAsk = tagsOf(it).has("photo") ? " В самом конце одной-двумя фразами дай совет для Инстаграма и селфи: где встать, какой ракурс, в какое время меньше людей и лучше свет." : "";
     const prompt = `${VOICE}\n\nМесто: «${it.title}»${it.desc ? " (" + it.desc + ")" : ""}. ${where}\nСтатья из Википедии как главный источник фактов (выбери из неё самые яркие истории с именами и цифрами; добавляй своё, только если уверен):\n"""${material}"""\n\nРасскажи нам про это место. ${fmt()}${photoAsk}`;
     runStory({
       id: it.id, prompt,
@@ -1101,7 +1136,7 @@ a{color:var(--accent)}
     if (it.kind === "food"){
       prompt = `${VOICE}\n\nЗаведение «${it.title}» (${facts}), ${city}. ${where}\nРасскажи нам про него: чем оно знаменито, его история и люди за ним, кто из известных тут бывал (только если точно знаешь), что обязательно заказать, когда лучше прийти, какие цены примерно. Если это место тебе на самом деле не знакомо, честно скажи это одной фразой и дай общий совет по такому типу заведений в этом районе, ничего не выдумывая. ${LEN.short.words}, короткие абзацы, без списков, без эмодзи.`;
     } else {
-      prompt = `${VOICE}\n\nТочка «${it.title}» (${facts}), ${city}. ${where}\nЭто ${it.desc || "точка для фото"}. Расскажи, что отсюда видно или что это за объект, если знаешь его историю, и как снять лучший кадр: откуда, в какое время суток, какой ракурс. Если не знаешь конкретно эту точку, скажи честно и дай совет по съёмке без выдумок. ${LEN.short.words}, короткие абзацы, без списков, без эмодзи.`;
+      prompt = `${VOICE}\n\nТочка «${it.title}» (${facts}), ${city}. ${where}\nЭто ${it.desc || "точка для фото"}. Расскажи, что отсюда видно или что это за объект, если знаешь его историю, и как снять кадр для Инстаграма и селфи: где встать, какой ракурс, что будет за спиной, в какое время лучший свет и меньше людей. Если не знаешь конкретно эту точку, скажи честно и дай совет по съёмке без выдумок. ${LEN.short.words}, короткие абзацы, без списков, без эмодзи.`;
     }
     runStory({
       id: it.id, prompt, maxTokens: 600,
